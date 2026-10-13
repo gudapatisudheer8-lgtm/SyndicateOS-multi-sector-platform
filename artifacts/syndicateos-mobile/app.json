@@ -1,7 +1,13 @@
 {
   "expo": {
     "name": "SyndicateOS",
-    "slug": "syndicateos-mobile",
+    "slug": "sos",
+    "owner": "krishisetu",
+    "extra": {
+      "eas": {
+        "projectId": "2e26af93-eb82-40e1-8910-9209003b0275"
+      }
+    },
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/brand/icon.png",

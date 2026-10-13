@@ -21,6 +21,23 @@ APP = ROOT / "artifacts/syndicateos-mobile"
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
+def export_mobile_web(output_dir, env):
+    """Apply the EC2-only base path for export, restoring the exact native config."""
+    config_path = APP / "app.json"
+    original = config_path.read_bytes()
+    config = json.loads(original)
+    if config["expo"].get("experiments", {}).get("baseUrl"):
+        raise RuntimeError("Native config must not contain a browser-only base path.")
+    try:
+        config["expo"].setdefault("experiments", {})["baseUrl"] = "/mobile"
+        config_path.write_text(json.dumps(config, indent=2) + "\n")
+        subprocess.run(["pnpm", "exec", "expo", "export", "--platform", "web",
+                        "--max-workers", "2",
+                        "--output-dir", str(Path(output_dir).resolve())],
+                       cwd=APP, env=env, check=True)
+    finally:
+        config_path.write_bytes(original)
+
 def main():
     global NAME, STAGE
     parser = argparse.ArgumentParser(description=__doc__)
@@ -38,10 +55,8 @@ def main():
     if existing.get("schema_version") != "22" or existing.get("frontend_fix") != "sos-consolidated-20261013-registration-label":
         raise RuntimeError("Unexpected EC2 baseline; stop and review compatibility.")
     STAGE.mkdir(parents=True)
-    env = {**os.environ, "CI": "1", "EXPO_PUBLIC_DOMAIN": "sos.krishisetu9.in",
-           "SOS_MOBILE_WEB_BASE_PATH": "/mobile"}
-    subprocess.run(["pnpm", "exec", "expo", "export", "--platform", "web", "--output-dir", str(STAGE / "mobile")],
-                   cwd=APP, env=env, check=True)
+    env = {**os.environ, "CI": "1", "EXPO_PUBLIC_DOMAIN": "sos.krishisetu9.in"}
+    export_mobile_web(STAGE / "mobile", env)
     page = (STAGE / "mobile/index.html").read_text()
     if "/mobile/_expo/" not in page:
         raise RuntimeError("Export did not preserve /mobile paths.")
