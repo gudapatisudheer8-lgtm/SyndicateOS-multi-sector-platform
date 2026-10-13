@@ -14,3 +14,9 @@ The promotional video must give a tour of the current open-plots venture applica
 **Why:** The user rejected the earlier film because it did not present the application.
 
 **How to apply:** Ground the tour in the current product rather than invented dashboard artwork. Check feature accuracy in one review and visuals, narration, and pacing in the other. The supplied ten-second reference establishes the desired quality; the user allows up to two minutes if needed.
+
+The user approved a similar available narrator after hearing a short voice sample; exact cloning of the reference speaker is not required.
+
+**Why:** The user selected “Use this narrator” after being told the sample was a similar voice, not a clone.
+
+**How to apply:** Preserve the approved narrator when revising this film. Do not switch voices or claim the reference speaker was cloned.

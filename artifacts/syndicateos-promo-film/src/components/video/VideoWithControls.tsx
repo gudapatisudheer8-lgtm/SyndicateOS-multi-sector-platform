@@ -3,16 +3,7 @@ import { ChevronDown, ChevronUp, Pause, Play, Repeat, Volume2, VolumeX } from 'l
 import VideoTemplate, { SCENE_DURATIONS } from './VideoTemplate';
 import { useSceneControls } from './useSceneControls';
 
-const DETAILS = [
-  'Opening',
-  'Accountant console',
-  'Project accounts',
-  'Expenses & approvals',
-  'Open plotting',
-  'Partner portal',
-  'Shared workflow',
-  'Brand close',
-];
+const DETAILS = ['Opening','Multiple projects','Accountant dashboard','Expenses & passbook','Open plotting','Booking & collections','Blueprint 3D','Marketing links','Partner mobile & reminders','Brand close'];
 
 function formatTime(milliseconds: number) {
   const seconds = Math.floor(Math.max(0, milliseconds) / 1000);
@@ -35,7 +26,7 @@ export default function VideoWithControls() {
         sceneIndex: index,
         sceneCount: DETAILS.length,
         sceneTitle: DETAILS[index],
-        filePath: 'src/components/video/scenes/FilmScenes.tsx',
+        filePath: 'src/components/video/scenes/TourScenes.tsx',
         lineNumber: 1,
       },
     }, '*');

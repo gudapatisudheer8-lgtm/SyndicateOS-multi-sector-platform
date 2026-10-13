@@ -704,3 +704,105 @@ mtime_ms = 1791914075079
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:1009d9c2-b863-401d-baa1-ced63916b66e/af466786-1766-40f4-9a24-ed6015e7e72e/24d07b72-e808-47d8-986e-26aa99ac389f"
 storage_version_token = "1791914131572073"
 content_type = "audio/mpeg"
+
+[[outputs]]
+id = "psXPlBELO3uBKmKIwU5Ca"
+uri = "file://artifacts/syndicateos-promo-film/public/audio/tour_vo_02.mp3"
+type = "audio"
+title = "speech"
+description = "Text-to-speech audio: Run every firm and every venture from one place. Switch between projects, or add a new one in seconds."
+logical_id = "b787a2b0-347f-4ea5-8a47-f34f5962f169"
+
+[[outputs]]
+id = "78jl-4pfVEVC6RSOFM5D9"
+uri = "file://artifacts/syndicateos-promo-film/public/audio/tour_vo_01.mp3"
+type = "audio"
+title = "speech"
+description = "Text-to-speech audio: SyndicateOS. One complete solution for your partnership projects."
+logical_id = "f118deea-98e3-4511-87f5-b0359071f80a"
+
+[[outputs]]
+id = "IJ9RWSJdQoZaCW8q0x2VF"
+uri = "file://artifacts/syndicateos-promo-film/public/audio/tour_vo_06.mp3"
+type = "audio"
+title = "speech"
+description = "Text-to-speech audio: Book a plot and record the payment in a single step. Collections and balances update straight away."
+logical_id = "6843d37c-bc4f-4a49-8d10-bd27c539b499"
+
+[[outputs]]
+id = "BsRBVzZssUyqEmk6zGS3f"
+uri = "file://artifacts/syndicateos-promo-film/public/audio/tour_vo_07.mp3"
+type = "audio"
+title = "speech"
+description = "Text-to-speech audio: Once a layout blueprint is confirmed, explore it in an illustrative 3D view."
+logical_id = "5a3bf620-e626-42c7-b37f-bb002c88cee5"
+
+[[outputs]]
+id = "sKQWlu4Otfz54SRzr9VPe"
+uri = "file://artifacts/syndicateos-promo-film/public/audio/tour_vo_04.mp3"
+type = "audio"
+title = "speech"
+description = "Text-to-speech audio: Every investment, expense and drawing is enrolled into the project passbook, so spending is tracked as it happens."
+logical_id = "5075aaac-5ee8-44a3-87b2-b9e60f37d298"
+
+[[outputs]]
+id = "DDWVPDTjr8GjDHLoyl1ge"
+uri = "file://artifacts/syndicateos-promo-film/public/audio/tour_vo_10.mp3"
+type = "audio"
+title = "speech"
+description = "Text-to-speech audio: SyndicateOS. Your partnership projects, in real time."
+logical_id = "d3a01670-98f0-40fd-adaa-0cdd7c7c679a"
+
+[[outputs]]
+id = "12ttfBF95EorGQdb0DQ4I"
+uri = "file://artifacts/syndicateos-promo-film/public/audio/tour_vo_03.mp3"
+type = "audio"
+title = "speech"
+description = "Text-to-speech audio: The accountant's dashboard brings project cost, projected sales, inventory and the live project account together, at a glance."
+logical_id = "44dc50c0-a1f6-49f8-885e-d3665711a03d"
+
+[[outputs]]
+id = "GE5Dzv6fPOFpKlSOxDYMR"
+uri = "file://artifacts/syndicateos-promo-film/public/audio/tour_vo_08.mp3"
+type = "audio"
+title = "speech"
+description = "Text-to-speech audio: Create a personal plot portal link for each marketing agent, and share it straight to WhatsApp."
+logical_id = "9ed4dfa1-a0ea-4939-85cc-9744db8218c5"
+
+[[outputs]]
+id = "_Cu6WTPuicOTrh_zjPwTV"
+uri = "file://artifacts/syndicateos-promo-film/public/audio/tour_vo_09.mp3"
+type = "audio"
+title = "speech"
+description = "Text-to-speech audio: Partners follow their own dashboard, plots and statements on mobile, with in-app notifications and registration reminders keeping everyone on time."
+logical_id = "6d99d469-c436-494d-abcc-c1fa108de4f4"
+
+[[outputs]]
+id = "DacKGEucShcU83yZmL65e"
+uri = "file://artifacts/syndicateos-promo-film/public/audio/tour_vo_05.mp3"
+type = "audio"
+title = "speech"
+description = "Text-to-speech audio: Open plotting lays out each sector, plot by plot, with facing, rate and status, from available to token booked."
+logical_id = "9f1e9dd2-3b96-4490-85b6-226eaf1b2a91"
+
+[[outputs]]
+id = "-XLykKHRe_YNt7D8FT7U7"
+uri = "file://artifacts/syndicateos-promo-film/public/audio/tour_music.mp3"
+type = "audio"
+title = "generated_music"
+description = "Generated music: Classic, elegant corporate cinematic underscore for a professional real-estate software product tour. Warm grand piano motif, soft strings, gentle pulsing low percussion, subtle buil…"
+logical_id = "29b4feef-4d42-4df8-8bc3-b64f40fa8cde"
+
+[[outputs]]
+id = "s1YvAieQyXs6bIzQ_8lRC"
+uri = "file://generated-artifacts/syndicateos-application-tour-90s.mp4"
+type = "video"
+title = "SyndicateOS — Application Tour (90 seconds)"
+description = "Download the revised 720p MP4 with the approved narrator, music, current amber logo, and animated web/mobile application screens using clearly labelled demo data. Covers accountant and partner dashboards, project finances, plots and booking, illustrative 3D, marketing invitations, and registration reminders."
+logical_id = "55018ad5-0fc4-4b84-bd5e-be53c7b3401f"
+content_hash = "sha256:44905430616a2839a22d6d2b8140764931aae8bb373c19a18b7cecadbb81b79f"
+size = 14397092
+mtime_ms = 1791915324999
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:1009d9c2-b863-401d-baa1-ced63916b66e/55018ad5-0fc4-4b84-bd5e-be53c7b3401f/5378782c-d462-4f91-a5cb-b96018bcf98d"
+storage_version_token = "1791915443430637"
+content_type = "video/mp4"
