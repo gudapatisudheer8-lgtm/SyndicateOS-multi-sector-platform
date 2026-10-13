@@ -690,3 +690,17 @@ mtime_ms = 1791898236230
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:1009d9c2-b863-401d-baa1-ced63916b66e/25a75059-c094-4ad6-8f2c-3e41eab899cf/867c701e-7784-4d47-8c98-61143c7f369c"
 storage_version_token = "1791898269476755"
 content_type = "text/html"
+
+[[outputs]]
+id = "dYNN1dZxv_u_K9YNzRrfo"
+uri = "file://artifacts/syndicateos-promo-film/public/audio/narrator-preview.mp3"
+type = "audio"
+title = "SyndicateOS — narrator voice sample"
+description = "A 13-second English narration sample for approval. Similar available narrator—not a clone of the reference voice. No full narration or new film has been generated."
+logical_id = "af466786-1766-40f4-9a24-ed6015e7e72e"
+content_hash = "sha256:30da031139f5e9705238ffc140e06cd6890e02ac8e1e112423311adbec453867"
+size = 216546
+mtime_ms = 1791914075079
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:1009d9c2-b863-401d-baa1-ced63916b66e/af466786-1766-40f4-9a24-ed6015e7e72e/24d07b72-e808-47d8-986e-26aa99ac389f"
+storage_version_token = "1791914131572073"
+content_type = "audio/mpeg"

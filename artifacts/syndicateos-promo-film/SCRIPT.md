@@ -103,3 +103,13 @@ Audio: composite_audio.mp3 mixed locally with ffmpeg (60.03s, max -3.5 dBFS, lim
 - **SFX:** None; the user requested voiceover and music, not additional effects.
 - **Playback file:** `composite_audio.mp3`.
 - **Privacy and claims:** User-provided captures were reviewed but intentionally not displayed. All interface records are invented demo values, labeled illustrative; do not show private names, live-looking account identifiers, phone numbers, account numbers, actual financials, project identifiers, or screenshot content. No price, performance guarantee, compliance certification, or unsupported product claim.
+
+---
+
+## PENDING APPROVAL — Narrator voice sample (not part of the current film)
+- **Status:** Waiting for user approval. Nothing in the film's playback, scenes or mix has changed.
+- **File:** `public/audio/narrator-preview.mp3` (MP3, 44.1 kHz, mono, 13.51 s)
+- **Exact text:** "SyndicateOS is one place for your partnership projects. Track every open-plot venture, every expense and every partner, in real time, from the accountant's console to the partner's dashboard."
+- **Voice:** ElevenLabs catalog "Sana Narration Match" (ID SCafTCyvAd3StlExwV4j, generated voice: adult female, warm, light Indian English accent). It was picked as a voice that sounds similar to the narrator in the reference video. It is not a clone, and no one has confirmed it matches the reference speaker.
+- **Model/settings:** eleven_multilingual_v2; stability 0.55, similarityBoost 0.8, style 0.15, useSpeakerBoost true, speed 1.0.
+- **Checks:** ffprobe confirms a valid mp3. ffmpeg peak is -1.37 dBFS and mean is -18.4 dB, so there is no clipping.
