@@ -18,3 +18,4 @@
 - [Video browser typings](video-browser-typings.md) — inherited Node-oriented TypeScript libraries can cause widespread browser errors; preserve protected video scaffold.
 - [Native Android build limits](native-android-build-limits.md) — SDK/NDK/Gradle can exceed writable quota despite free host disk; prefer a remote builder.
 - [Expo build toolchain](expo-build-toolchain.md) — pin remote package-manager versions to the validated workspace version; preserve targeted script approvals and lockfile checks.
+- [Android APK verification](android-apk-verification.md) — archive-tool extra-field warnings alone do not prove APK corruption; separate integrity, signing and device compatibility.
