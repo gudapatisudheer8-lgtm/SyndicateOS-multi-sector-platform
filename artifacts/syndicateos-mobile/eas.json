@@ -4,6 +4,7 @@
   },
   "build": {
     "apk": {
+      "pnpm": "10.26.1",
       "distribution": "internal",
       "developmentClient": false,
       "credentialsSource": "remote",
