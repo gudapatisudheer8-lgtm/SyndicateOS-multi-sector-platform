@@ -20,3 +20,9 @@ Provider configuration is not proof that image extraction works.
 **Why:** Provisioning succeeded but actual synthetic-plan requests failed at the provider gateway with both supported request formats.
 
 **How to apply:** Verify an actual image request before calling AI extraction ready. Do not hide upstream errors or keep spending credits on repeated failing checks. A separate manual review path may still be delivered honestly.
+
+On mobile, a confirmed venture layout should open as a compact 3D presentation by default, with one accountant-only edit/recreate entry. Keep editor tools and tabs out of the resting presentation and use finger gestures rather than zoom, rotate or tilt button rows.
+
+**Why:** The user found that the editor and persistent viewer controls occupied too much of the phone screen after the layout was already saved.
+
+**How to apply:** Apply this to native and mobile-browser presentation. Entering editing must not itself regenerate anything or erase saved geometry; keep the confirmed view until a replacement is explicitly confirmed.
