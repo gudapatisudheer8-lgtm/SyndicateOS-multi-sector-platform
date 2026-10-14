@@ -1,0 +1,255 @@
+PS C:\WINDOWS\system32> scp -i "C:\Users\91986\Downloads\SOS.pem" "C:\Users\91986\Downloads\sos-consolidated-20261015-open-plots.tar.gz" ubuntu@3.111.185.116:/home/ubuntu/
+sos-consolidated-20261015-open-plots.tar.gz                                           100%   41MB   4.4MB/s   00:09
+PS C:\WINDOWS\system32> ssh -i C:\Users\91986\Downloads\SOS.pem ubuntu@3.111.185.116
+Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-1014-aws x86_64)
+
+ * Documentation:  https://docs.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Wed Oct 14 20:47:37 UTC 2026
+
+  System load:  0.0               Temperature:           -273.1 C
+  Usage of /:   69.6% of 6.61GB   Processes:             120
+  Memory usage: 55%               Users logged in:       0
+  Swap usage:   0%                IPv4 address for ens5: 172.31.13.52
+
+ * Ubuntu Pro delivers the most comprehensive open source security and
+   compliance features.
+
+   https://ubuntu.com/aws/pro
+
+Expanded Security Maintenance for Applications is not enabled.
+
+47 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+Last login: Tue Oct 13 13:33:34 2026 from 49.206.43.18
+ubuntu@ip-172-31-13-52:~$ (
+  set -eu
+  cd /home/ubuntu
+
+  echo "755972cec7cf36b1dcb13fcb111b4f3f724a8d3eb4bb2e9733b3a35247d818b0  sos-consolidated-20261015-open-plots.tar.gz" | sha256sum -c -
+
+  STAGE="$(mktemp -d /home/ubuntu/sos-open-plots-stage.XXXXXX)"
+  tar -xzf sos-consolidated-20261015-open-plots.tar.gz -C "$STAGE"
+  cd "$STAGE/sos-consolidated-20261015-open-plots"
+
+  sha256sum -c FILES.sha256
+  echo "Keep this installer directory: $PWD"
+
+  sudo python3 update.py inspect
+  sudo python3 update.py install
+  sudo python3 update.py verify
+
+  sudo python3 mobile-package/install.py install
+  sudo python3 mobile-package/install.py verify
+)
+sos-consolidated-20261015-open-plots.tar.gz: OK
+README.md: OK
+SOURCE-FINGERPRINTS.json: OK
+generate-web-push-credentials.mjs: OK
+migrations/V10__web_business_masters.sql: OK
+migrations/V11__reconcile_extent_unit_masters.sql: OK
+migrations/V12__subscription_plan_masters.sql: OK
+migrations/V13__project_cash_accounts.sql: OK
+migrations/V14__project_bank_institutions.sql: OK
+migrations/V15__project_layout_utility_areas.sql: OK
+migrations/V16__personal_marketing_access.sql: OK
+migrations/V17__expense_payment_mode_bindings.sql: OK
+migrations/V18__financial_payment_bindings.sql: OK
+migrations/V19__no_partner_self_approval_policy.sql: OK
+migrations/V1__onboarding_and_configuration.sql: OK
+migrations/V20__reviewed_project_blueprints.sql: OK
+migrations/V21__direct_posting_and_corrections.sql: OK
+migrations/V22__registration_reminders.sql: OK
+migrations/V23__editable_venture_layouts.sql: OK
+migrations/V2__initial_sector_configuration.sql: OK
+migrations/V3__project_erp_core.sql: OK
+migrations/V4__original_dashboard_configuration.sql: OK
+migrations/V5__private_project_attachments.sql: OK
+migrations/V6__complete_project_setup.sql: OK
+migrations/V7__reconcile_booking_reservations.sql: OK
+migrations/V8__simple_open_plotting_forms.sql: OK
+migrations/V9__business_masters_and_profile_metadata.sql: OK
+mobile-package/install.py: OK
+mobile-package/manifest.json: OK
+mobile-package/mobile/_expo/static/js/web/entry-eeb8315488fa7b1d42a541ab38d66b7f.js: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.3f78af31cca60105799838a1a7a59fbd.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Entypo.31b5ffea3daddc69dd01a1f3d6cf63c5.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/EvilIcons.140c53a7643ea949007aa9a282153849.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4b48e04dc1ce10bfbddb262c8b835f.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome.b06871f281fee6b241d60582ae9369b9.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Brands.3b89dd103490708d19a95adcae52210e.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Regular.1f77739ca9ff2188b539c36f30ffa2be.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Solid.605ed7926cf39a2ad5ec2d1f9d391d3d.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Brands.56c8d80832e37783f12c05db7c8849e2.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Regular.370dd5af19f8364907b6e2c41f45dbbf.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Solid.adec7d6f310bc577f05e8fe06a5daccf.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Fontisto.b49ae8ab2dbccb02c4d11caaacf09eab.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Foundation.e20945d7c929279ef7a6f1db184a4470.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.6e435534bd35da5fef04168860a9b8fa.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Octicons.871378c6eab492a3e689a9385dc45a12.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/SimpleLineIcons.d2285965fe34b05465047401b8595dd0.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Zocial.1681f34aaca71b8dfb70756bca331eb2.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/100Thin/Inter_100Thin.ddbb1cd55ad509e82377bd10beed6506.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/100Thin_Italic/Inter_100Thin_Italic.1b97f7df9b976cfe530c18c09598e6f6.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/200ExtraLight/Inter_200ExtraLight.e1f33daee21eb5998b13d3e05264d9a3.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/200ExtraLight_Italic/Inter_200ExtraLight_Italic.3d0662838915a7a16d01c262735d3d29.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/300Light/Inter_300Light.d2994e3dea3856e1834395ad6cce32af.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/300Light_Italic/Inter_300Light_Italic.17f8f23a2852bfa14ce5bf590c2a0e2c.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.51b6ad87261f18b6433ec52871ddfabc.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/400Regular_Italic/Inter_400Regular_Italic.36cad9f97595b7759264b945d64502b4.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.137ab18bace28dd0bd83eb3b8ed2bc54.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/500Medium_Italic/Inter_500Medium_Italic.155406bfbfb023eb104728edfe62c0e9.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.a5f35888d2da465de352e0dcfaf33324.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/600SemiBold_Italic/Inter_600SemiBold_Italic.a349d1ac188e1a67689432f44de99849.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.6e237de4f1f413afa2fcc45c77ac343a.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/700Bold_Italic/Inter_700Bold_Italic.3398006c80026f0508aaaf4808950d56.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/800ExtraBold/Inter_800ExtraBold.6016034293c084aa0c056e83938bf1cc.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/800ExtraBold_Italic/Inter_800ExtraBold_Italic.7ca909a56537d965feef41abe58b87e0.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/900Black/Inter_900Black.bcec6eda9700a81ba92c483a2f2c02c1.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/@expo-google-fonts+inter@0.4.2/node_modules/@expo-google-fonts/inter/900Black_Italic/Inter_900Black_Italic.d5f78c24de59ce5e4bad405e10e71941.ttf: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/arrow_down.017bc6ba3fc25503e5eb5e53826d48a8.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/error.d1ea1496f9057eb392d5bbf3732a61b7.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/file.19eeb73b9593a38f8e9f418337fc7d10.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/forward.d8b800c443b8972542883e0b9de2bdc6.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/pkg.ab19f4cbc543357183a20571f68380a3.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/react-navigation/elements/back-icon-mask.0a328cd9c1afd0afe8e3b1ec5165b1b4.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/react-navigation/elements/back-icon.35ba0eaec5a4f5ed12ca16fabeae451d.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/react-navigation/elements/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/react-navigation/elements/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55@2x.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/react-navigation/elements/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55@3x.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/react-navigation/elements/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55@4x.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/react-navigation/elements/close-icon.808e1b1b9b53114ec2838071a7e6daa7.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/react-navigation/elements/close-icon.808e1b1b9b53114ec2838071a7e6daa7@2x.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/react-navigation/elements/close-icon.808e1b1b9b53114ec2838071a7e6daa7@3x.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/react-navigation/elements/close-icon.808e1b1b9b53114ec2838071a7e6daa7@4x.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/react-navigation/elements/search-icon.286d67d3f74808a60a78d3ebf1a5fb57.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/sitemap.412dd9275b6b48ad28f5e3d81bb1f626.png: OK
+mobile-package/mobile/assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/unmatched.20e71bdf79e3a97bf55fd9e164041578.png: OK
+mobile-package/mobile/assets/assets/brand/logo-horizontal.4145d55bc6618956c609027fa515ee67.png: OK
+mobile-package/mobile/assets/assets/brand/logo-stacked.62ab90b6f27b219b78cd27c638523c6d.png: OK
+mobile-package/mobile/assets/assets/brand/mark.0911dad6aa2feb5a0b0e071c4e19421f.png: OK
+mobile-package/mobile/favicon.ico: OK
+mobile-package/mobile/index.html: OK
+mobile-package/mobile/metadata.json: OK
+mobile-package/mobile/release.json: OK
+mobile-package/mobile.nginx.conf: OK
+permissions.sql: OK
+sos-api.jar: OK
+update.json: OK
+update.py: OK
+web/assets/index-3wzlYdbC.js: OK
+web/assets/index-D4bMZvD7.css: OK
+web/favicon.svg: OK
+web/index.html: OK
+web/registration-push-sw.js: OK
+web/release.json: OK
+web/robots.txt: OK
+Keep this installer directory: /home/ubuntu/sos-open-plots-stage.lQpaSn/sos-consolidated-20261015-open-plots
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+Package, existing installation, runtime target, Java, Nginx and setup port verified.
+Database credentials/history and pg_dump compatibility are checked before install stops anything.
+No service, credential, upload or database changes made.
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+Existing sos_deploy database password (hidden):
+Brief downtime; back up lowercase sos and uploads, then upgrade to V23. Type UPDATE SOS: update sos
+Private recovery directory: /opt/syndicateos-update-backups/sos-consolidated-20261015-open-plots-20261014T204855279612Z
+Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.5.16)
+
+2026-10-14T20:48:58.588Z  INFO 13588 --- [syndicateos-api] [           main] com.syndicateos.SosApplication           : Starting SosApplication v0.1.0 using Java 21.0.12.1 with PID 13588 (/opt/syndicateos/releases/sos-consolidated-20261015-open-plots/sos-api.jar started by root in /opt/syndicateos/releases/sos-consolidated-20261015-open-plots)
+2026-10-14T20:48:58.596Z  INFO 13588 --- [syndicateos-api] [           main] com.syndicateos.SosApplication           : No active profile set, falling back to 1 default profile: "default"
+2026-10-14T20:49:01.355Z  INFO 13588 --- [syndicateos-api] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8091 (http)
+2026-10-14T20:49:01.387Z  INFO 13588 --- [syndicateos-api] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-14T20:49:01.388Z  INFO 13588 --- [syndicateos-api] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.55]
+2026-10-14T20:49:01.433Z  INFO 13588 --- [syndicateos-api] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-10-14T20:49:01.435Z  INFO 13588 --- [syndicateos-api] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2675 ms
+Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
+2026-10-14T20:49:04.648Z  INFO 13588 --- [syndicateos-api] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8091 (http) with context path '/'
+2026-10-14T20:49:04.692Z  INFO 13588 --- [syndicateos-api] [           main] com.syndicateos.SosApplication           : Started SosApplication in 7.2 seconds (process running for 8.31)
+2026-10-14T20:49:05.739Z  INFO 13588 --- [syndicateos-api] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://krishisetu-db.cpmomccww28x.ap-south-1.rds.amazonaws.com:5432/sos?sslmode=verify-full&sslrootcert=/opt/syndicateos/current/certs/aws-rds-global-bundle.pem&connectTimeout=3&socketTimeout=5&ApplicationName=SOS (PostgreSQL 16.12)
+2026-10-14T20:49:05.883Z  INFO 13588 --- [syndicateos-api] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 24 migrations (execution time 00:00.101s)
+2026-10-14T20:49:05.999Z  INFO 13588 --- [syndicateos-api] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "sos": 22
+2026-10-14T20:49:06.048Z  INFO 13588 --- [syndicateos-api] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "sos" to version "23 - editable venture layouts"
+2026-10-14T20:49:06.139Z  INFO 13588 --- [syndicateos-api] [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 1 migration to schema "sos", now at version v23 (execution time 00:00.056s)
+2026-10-14T20:49:07.061Z  INFO 13588 --- [syndicateos-api] [           main] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-10-14T20:49:07.065Z  INFO 13588 --- [syndicateos-api] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+BEGIN
+DO
+GRANT
+GRANT
+GRANT
+REVOKE
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+COMMIT
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+Verified sos-consolidated-20261015-open-plots: correct API binary, readiness and HTTPS frontend.
+Schema V23 verified. Existing owner, firm assignments, credentials and uploads preserved.
+Original checksummed deployment preserved. Complete README.md signed-in acceptance checks.
+Permanent verifier: /opt/syndicateos/releases/sos-consolidated-20261015-open-plots/update.py
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+Verified sos-consolidated-20261015-open-plots: correct API binary, readiness and HTTPS frontend.
+Routing backup: /var/backups/syndicateos-mobile/20261014-204919-13769
+Verified: mobile HTML, JS/font/image bytes, existing web release and API readiness.
+https://sos.krishisetu9.in/mobile/
+Installed mobile only. No API restart, schema migration, or customer-data changes.
+Rollback: sudo python3 /home/ubuntu/sos-open-plots-stage.lQpaSn/sos-consolidated-20261015-open-plots/mobile-package/install.py rollback /var/backups/syndicateos-mobile/20261014-204919-13769
+Verified: mobile HTML, JS/font/image bytes, existing web release and API readiness.
+https://sos.krishisetu9.in/mobile/
+ubuntu@ip-172-31-13-52:~$ curl --fail --silent --show-error https://sos.krishisetu9.in/api/readyz
+curl --fail --silent --show-error https://sos.krishisetu9.in/release.json
+curl --fail --silent --show-error https://sos.krishisetu9.in/mobile/release.json
+
+sudo nginx -t
+sudo systemctl is-active nginx syndicateos-api
+{"status":"ready","databaseReachable":true,"targetVerified":true,"reason":"READY"}{
+  "release": "sos-fresh-ec2-20261010",
+  "schema_version": "23",
+  "frontend_base": "/",
+  "frontend_fix": "sos-consolidated-20261015-open-plots",
+  "api_sha256": "b743630890b50d6b98d0a63c40c089d91974cf39b4d68c6fb556560669f1a9b7"
+}
+{
+  "release": "sos-mobile-20261015-open-plots",
+  "mobile_base": "/mobile",
+  "api_origin": "https://sos.krishisetu9.in",
+  "existingWebRelease": {
+    "release": "sos-fresh-ec2-20261010",
+    "schema_version": "23",
+    "frontend_base": "/",
+    "frontend_fix": "sos-consolidated-20261015-open-plots",
+    "api_sha256": "b743630890b50d6b98d0a63c40c089d91974cf39b4d68c6fb556560669f1a9b7"
+  },
+  "verifyAssets": [
+    "_expo/static/js/web/entry-eeb8315488fa7b1d42a541ab38d66b7f.js",
+    "assets/__node_modules/.pnpm/@expo+vector-icons@15.1.1_expo-font@57.0.4_react-native@0.86.3_@babel+core@7.29.7_@type_022122244800d27e1010b3508a466f23/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.3f78af31cca60105799838a1a7a59fbd.ttf",
+    "assets/__node_modules/.pnpm/expo-router@57.0.26_fc54218ebaa821c67e8f7c28f46a09d3/node_modules/expo-router/assets/arrow_down.017bc6ba3fc25503e5eb5e53826d48a8.png"
+  ]
+}
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+active
+active
+ubuntu@ip-172-31-13-52:~$
