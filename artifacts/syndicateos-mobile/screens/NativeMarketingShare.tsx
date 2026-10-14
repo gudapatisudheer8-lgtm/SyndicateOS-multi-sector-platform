@@ -4,7 +4,7 @@ import { Banner, Btn, Field } from '@/components/ui';
 import { useColors } from '@/hooks/useColors';
 import { nativeApi } from '@/lib/native-api';
 import { errMessage } from '@/lib/session';
-import { InvitationMemory, invitationMessage, marketingPortalEntry, normalizeAgentMobile, type InvitePayload } from '@/lib/marketingInvites';
+import { InvitationMemory, invitationMessage, invitationExpiryText, marketingPortalEntry, normalizeAgentMobile, type InvitePayload } from '@/lib/marketingInvites';
 import { Dialog } from '@/screens/ErpScreens';
 
 type Create = Parameters<InvitationMemory['obtain']>[1];
@@ -115,12 +115,13 @@ export function NativeMarketingShare({ projectId, projectName, firmName, onClose
       </View>
       <Field label="Agent / broker name *" value={name} onChangeText={(v) => { if (!pending) { setName(v); setInvite(null); setMessage(''); setNote(null); } }} editable={!pending} error={name.trim().length > 100 ? 'Use 100 characters or fewer.' : undefined} placeholder="Full name" testID="marketing-agent-name" />
       <Field label="Agent mobile *" value={phone} onChangeText={(v) => { if (!pending) { setPhone(v); setInvite(null); setMessage(''); setNote(null); } }} editable={!pending} keyboardType="phone-pad" placeholder="10-digit Indian mobile" error={phone.trim() && !mobileOk ? 'Enter a valid 10-digit Indian mobile number.' : undefined} testID="marketing-agent-mobile" />
-      <Text style={{ color: c.mutedForeground, fontSize: 11, marginBottom: 10 }}>Nothing is created until you share or copy. Retrying the same details while this sheet stays open reuses the invitation.</Text>
+      <Text style={{ color: c.mutedForeground, fontSize: 11, marginBottom: 10 }}>Nothing is created until you share or copy. Retries reuse this invitation until its activation deadline; sharing after that creates a fresh link without resetting an existing agent’s PIN.</Text>
       {note ? <Banner tone={note.tone} title={note.t} /> : null}
       <View style={{ gap: 8 }}>
         <Btn label={pending ? 'Preparing invitation...' : 'Share invitation'} icon="share-2" loading={pending} disabled={!canAct} onPress={() => void run(share)} testID="marketing-share" />
         {Platform.OS === 'web' ? <Btn label="Copy full invitation (link and PIN)" icon="copy" variant="ghost" disabled={!canAct} onPress={() => void run(copyWeb)} testID="marketing-copy" /> : null}
       </View>
+      {invite ? <Text testID="marketing-expiry" selectable style={{ color: c.mutedForeground, fontSize: 12, marginTop: 12 }}>{invitationExpiryText(invite.activationExpiresAt)}</Text> : null}
       {pin ? <View style={{ marginTop: 12, borderRadius: 12, padding: 10, backgroundColor: c.warningSurface }}>
         <Text style={{ color: c.foreground, fontSize: 12 }}>New agent temporary PIN, share privately. The agent must change it at first sign-in.</Text>
         <Text selectable style={{ color: c.foreground, fontFamily: 'Inter_700Bold', fontSize: 22, letterSpacing: 4, marginTop: 4 }}>{pin}</Text>

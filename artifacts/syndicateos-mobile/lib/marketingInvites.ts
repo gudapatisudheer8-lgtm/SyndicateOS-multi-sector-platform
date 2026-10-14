@@ -4,6 +4,8 @@ export interface InviteResponse {
   created: boolean;
   requiresPinChange: boolean;
   temporaryPin?: string;
+  /** Server-issued first-use deadline, not a fixed expiry of activated access. */
+  activationExpiresAt?: string;
 }
 export interface InvitePayload extends InviteResponse { url: string; mobile: string }
 export interface InviteRequest { projectId: string; agentName: string; mobile: string }
@@ -46,13 +48,24 @@ export function marketingPortalEntry(input: { platform: string; domain?: string;
   return new URL(previewHost(origin.hostname) ? '/syndicateos-web/marketing' : '/marketing', origin).href;
 }
 
+export function invitationExpiryText(activationExpiresAt?: string): string {
+  if (!activationExpiresAt || !Number.isFinite(Date.parse(activationExpiresAt))) {
+    return 'Activation deadline unavailable from this server. Ask the office to confirm it; update the API to display the exact deadline.';
+  }
+  const deadline = new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    hour12: true, timeZone: 'Asia/Kolkata', timeZoneName: 'short',
+  }).format(new Date(activationExpiresAt));
+  return `Activate this link by ${deadline}. After activation, access remains available while the invitation, employee and project stay enabled. Sign-in sessions expire separately.`;
+}
+
 export function invitationMessage({ projectName, firmName, invite }: { projectName: string; firmName: string; invite: InvitePayload }): string {
   const access = invite.requiresPinChange
     ? invite.temporaryPin
       ? `Your temporary PIN: ${invite.temporaryPin}\nYou must set your own new PIN the first time you sign in.`
       : 'Use the temporary PIN given by the office. You must set your own new PIN the first time you sign in.'
     : 'Sign in with your mobile number and your existing PIN.';
-  return `${projectName} - Plot Inventory & Booking Requests\n\nYour personal link:\n${invite.url}\n\n${access}\n\nPromoted by ${firmName}.`;
+  return `${projectName} - Plot Inventory & Booking Requests\n\nYour personal link:\n${invite.url}\n\n${access}\n\n${invitationExpiryText(invite.activationExpiresAt)}\n\nPromoted by ${firmName}.`;
 }
 
 export class InvitationCancelledError extends Error {
@@ -68,6 +81,7 @@ export class InvitationMemory {
   private pending = new Map<string, Promise<InvitePayload>>();
   private projectId: string | null = null;
   private disposed = false;
+  constructor(private readonly now: () => number = Date.now) {}
 
   async obtain(
     input: { projectId: string; agentName: string; mobile: string; portalEntry: string },
@@ -87,7 +101,9 @@ export class InvitationMemory {
     this.projectId = input.projectId;
     const key = JSON.stringify([input.projectId, agentName.toLowerCase(), mobile, entry.href]);
     const cached = this.cache.get(key);
-    if (cached) return cached;
+    // A deliberate Share/Copy after the deadline gets a fresh link; never create on sheet open.
+    // This does not revoke an old link that has already been activated.
+    if (cached && (!cached.activationExpiresAt || Date.parse(cached.activationExpiresAt) > this.now())) return cached;
     const pending = this.pending.get(key);
     if (pending) return pending;
     const request = (async () => {
@@ -97,10 +113,15 @@ export class InvitationMemory {
           typeof response.created !== 'boolean' || typeof response.requiresPinChange !== 'boolean') {
         throw new Error('The server did not return a valid personal invitation.');
       }
+      if (response.activationExpiresAt !== undefined &&
+          (typeof response.activationExpiresAt !== 'string' || !Number.isFinite(Date.parse(response.activationExpiresAt)))) {
+        throw new Error('The server returned an invalid invitation activation deadline.');
+      }
       const payload: InvitePayload = {
         invitationToken: response.invitationToken, created: response.created,
         requiresPinChange: response.requiresPinChange, mobile,
         url: `${entry.href}?invite=${encodeURIComponent(response.invitationToken)}`,
+        ...(response.activationExpiresAt ? { activationExpiresAt: response.activationExpiresAt } : {}),
         ...(response.requiresPinChange && response.temporaryPin && /^\d{4,12}$/.test(response.temporaryPin)
           ? { temporaryPin: response.temporaryPin } : {}),
       };

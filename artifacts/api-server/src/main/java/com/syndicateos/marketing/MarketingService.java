@@ -74,12 +74,14 @@ public class MarketingService {
             var agent=jdbc.queryForMap("SELECT * FROM sos.marketing_agents WHERE mobile=? FOR UPDATE",mobile);
             if(!Boolean.TRUE.equals(agent.get("enabled"))) throw ApiProblem.denied();
             String raw=nonce(); UUID id=UUID.randomUUID();
-            jdbc.update("""
+            java.sql.Timestamp activationDeadline=jdbc.queryForObject("""
                 INSERT INTO sos.marketing_invitations(id,agent_id,project_id,token_hash,created_by,expires_at)
                 VALUES(?,?,?,?,?,now()+(? * interval '1 hour'))
-                """,id,agent.get("id"),project,digest(raw),actor.identityId(),positive(p,"invitationHours"));
+                RETURNING expires_at
+                """,java.sql.Timestamp.class,id,agent.get("id"),project,digest(raw),actor.identityId(),positive(p,"invitationHours"));
             var out=new LinkedHashMap<String,Object>();
             out.put("invitationToken",raw); out.put("created",created==1);
+            out.put("activationExpiresAt",activationDeadline.toInstant().toString());
             out.put("requiresPinChange",agent.get("must_change_pin"));
             if(Boolean.TRUE.equals(agent.get("must_change_pin")) && encoder.matches(temporary,(String)agent.get("pin_hash")))
                 out.put("temporaryPin",temporary);

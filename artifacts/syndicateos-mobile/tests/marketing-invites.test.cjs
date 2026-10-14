@@ -8,9 +8,39 @@ const source = fs.readFileSync(path.join(__dirname, '../lib/marketingInvites.ts'
 const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 const mod = { exports: {} };
 vm.runInNewContext(output, { exports: mod.exports, URL });
-const { normalizeAgentMobile, marketingPortalEntry, invitationMessage, InvitationMemory } = mod.exports;
+const { normalizeAgentMobile, marketingPortalEntry, invitationMessage, invitationExpiryText, InvitationMemory } = mod.exports;
 const response = (extra = {}) => ({ invitationToken: 'A'.repeat(43), created: true, requiresPinChange: true, temporaryPin: '456789', ...extra });
 const input = (extra = {}) => ({ projectId: 'project-one', agentName: ' Test Agent ', mobile: '9876543210', portalEntry: 'https://example.test/marketing', ...extra });
+
+test('activation deadline is the server timestamp displayed in IST, not an invented duration', () => {
+  const text = invitationExpiryText('2026-10-21T12:30:00Z');
+  assert.match(text, /21 Oct 2026/);
+  assert.match(text, /06:00 pm/i);
+  assert.match(text, /After activation/);
+  assert.match(text, /sessions expire separately/);
+  assert.match(invitationExpiryText(), /unavailable/);
+  assert.match(invitationExpiryText('invalid'), /unavailable/);
+});
+test('cached invitation renews only on an explicit action after the activation deadline', async () => {
+  let clock = Date.parse('2026-10-14T00:00:00Z'), calls = 0;
+  const memory = new InvitationMemory(() => clock);
+  const create = async () => response({ invitationToken: (++calls === 1 ? 'A' : 'B').repeat(43), activationExpiresAt: new Date(clock + 1000).toISOString() });
+  const one = await memory.obtain(input(), create);
+  assert.equal(calls, 1);
+  clock += 999;
+  assert.equal(await memory.obtain(input(), create), one);
+  clock += 1;
+  assert.equal(calls, 1); // passing time alone never creates an invitation
+  const two = await memory.obtain(input(), create);
+  assert.equal(calls, 2);
+  assert.notEqual(two.invitationToken, one.invitationToken);
+  assert.match(invitationMessage({projectName:'Test',firmName:'Office',invite:two}), /Activate this link by/);
+  memory.dispose();
+});
+test('invalid server deadlines fail explicitly instead of being cached or displayed as real expiry', async () => {
+  const memory = new InvitationMemory();
+  await assert.rejects(memory.obtain(input(), async () => response({activationExpiresAt:'not-a-date'})), /invalid invitation activation deadline/);
+});
 
 test('mobile normalization matches the existing web invitation form', () => {
   for (const n of ['9876543210', '+91 98765 43210', '09876543210']) assert.equal(normalizeAgentMobile(n), '+919876543210');

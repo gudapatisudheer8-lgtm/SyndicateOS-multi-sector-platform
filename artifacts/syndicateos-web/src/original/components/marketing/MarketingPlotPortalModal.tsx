@@ -22,6 +22,7 @@ interface InvitePayload {
   created: boolean;
   requiresPinChange: boolean;
   temporaryPin?: string;
+  activationExpiresAt?: string;
   url: string;
   mobile: string;
 }
@@ -31,6 +32,15 @@ const normalizeMobile = (v: string): string | null => {
   if (d.length === 12 && d.startsWith('91')) d = d.slice(2);
   else if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
   return /^[6-9]\d{9}$/.test(d) ? `+91${d}` : null;
+};
+
+const activationDeadlineText = (expiresAt?: string): string => {
+  if (!expiresAt || !Number.isFinite(Date.parse(expiresAt))) return 'Activation deadline unavailable from this server. Ask the office to confirm it; update the API to display the exact deadline.';
+  const date = new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    hour12: true, timeZone: 'Asia/Kolkata', timeZoneName: 'short',
+  }).format(new Date(expiresAt));
+  return `Activate this link by ${date}. After activation, access remains available while the invitation, employee and project stay enabled. Sign-in sessions expire separately.`;
 };
 
 export const MarketingPlotPortalModal: React.FC<MarketingPlotPortalModalProps> = ({
@@ -51,6 +61,7 @@ export const MarketingPlotPortalModal: React.FC<MarketingPlotPortalModalProps> =
   const [invitePending, setInvitePending] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [issuedPin, setIssuedPin] = useState<string | null>(null);
+  const [visibleInvite, setVisibleInvite] = useState<InvitePayload | null>(null);
   const [manualUrl, setManualUrl] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -69,6 +80,7 @@ export const MarketingPlotPortalModal: React.FC<MarketingPlotPortalModalProps> =
     if (!isOpen) {
       inviteCache.current.clear();
       setIssuedPin(null);
+      setVisibleInvite(null);
       setInviteError(null);
       setManualUrl(null);
     }
@@ -94,13 +106,15 @@ export const MarketingPlotPortalModal: React.FC<MarketingPlotPortalModalProps> =
     if (!mobile) { setInviteError('Enter a valid 10-digit Indian mobile number for the agent.'); return null; }
     const key = `${project.id}|${name.toLowerCase()}|${mobile}`;
     const cached = inviteCache.current.get(key);
-    if (cached) { showPin(cached); return cached; }
+    if (cached && (!cached.activationExpiresAt || Date.parse(cached.activationExpiresAt) > Date.now())) { showPin(cached); return cached; }
     inviteLock.current = true;
     setInvitePending(true);
     try {
-      const r = await api<{ invitationToken: string; created: boolean; requiresPinChange: boolean; temporaryPin?: string }>(
+      const r = await api<{ invitationToken: string; created: boolean; requiresPinChange: boolean; temporaryPin?: string; activationExpiresAt?: string }>(
         '/marketing/invitations', { method: 'POST', body: { projectId: project.id, agentName: name, mobile } });
       if (!r?.invitationToken) throw new ApiError(0, 'UNEXPECTED_RESPONSE', 'The server did not return an invitation.');
+      if (r.activationExpiresAt !== undefined && (typeof r.activationExpiresAt !== 'string' || !Number.isFinite(Date.parse(r.activationExpiresAt))))
+        throw new ApiError(0, 'UNEXPECTED_RESPONSE', 'The server returned an invalid invitation activation deadline.');
       const payload: InvitePayload = { ...r, url: buildUrl(r.invitationToken), mobile };
       inviteCache.current.set(key, payload);
       showPin(payload);
@@ -115,6 +129,7 @@ export const MarketingPlotPortalModal: React.FC<MarketingPlotPortalModalProps> =
   };
 
   function showPin(p: InvitePayload) {
+    setVisibleInvite(p);
     window.clearTimeout(pinTimer.current);
     if (p.requiresPinChange && p.temporaryPin) {
       setIssuedPin(p.temporaryPin);
@@ -149,7 +164,7 @@ export const MarketingPlotPortalModal: React.FC<MarketingPlotPortalModalProps> =
       : 'Sign in with your mobile number and your existing PIN.';
     const text = encodeURIComponent(
       `*${project?.name || 'Project'} - Plot Inventory & Booking Requests*\n\n` +
-      `Your personal link:\n${inv.url}\n\n${access}\n\nPromoted by ${firm?.name}.`
+       `Your personal link:\n${inv.url}\n\n${access}\n\n${activationDeadlineText(inv.activationExpiresAt)}\n\nPromoted by ${firm?.name}.`
     );
     const opened = window.open(`https://api.whatsapp.com/send?phone=${inv.mobile.replace(/\D/g, '')}&text=${text}`, '_blank', 'noopener');
     if (!opened) {
@@ -214,6 +229,7 @@ export const MarketingPlotPortalModal: React.FC<MarketingPlotPortalModalProps> =
           </div>
         </div>
 
+        {visibleInvite && <p data-testid="marketing-expiry" className="px-4 py-3 text-xs text-indigo-100 bg-slate-800 border-b border-slate-700">{activationDeadlineText(visibleInvite.activationExpiresAt)}</p>}
         {(inviteError || issuedPin || manualUrl) && (
           <div role="alert" className={`px-4 py-2.5 text-xs font-bold border-b space-y-2 ${inviteError ? 'bg-rose-950 text-rose-200 border-rose-800' : 'bg-amber-950 text-amber-200 border-amber-700'}`}>
             <div className="flex items-start justify-between gap-3">
@@ -243,12 +259,12 @@ export const MarketingPlotPortalModal: React.FC<MarketingPlotPortalModalProps> =
             <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-700">
               <User className="w-3.5 h-3.5 text-indigo-400" />
               <input type="text" required placeholder="Agent / Broker Name (required)" value={agentName}
-                onChange={(e) => setAgentName(e.target.value)} className="bg-transparent text-white font-bold text-xs outline-none w-48" />
+                onChange={(e) => { setAgentName(e.target.value); setVisibleInvite(null); setIssuedPin(null); setManualUrl(null); }} className="bg-transparent text-white font-bold text-xs outline-none w-48" />
             </div>
             <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-700">
               <Phone className="w-3.5 h-3.5 text-emerald-400" />
               <input type="text" required inputMode="tel" placeholder="+91 Mobile (required)" value={agentPhone}
-                onChange={(e) => setAgentPhone(e.target.value)} className="bg-transparent text-white font-bold text-xs outline-none w-36" />
+                onChange={(e) => { setAgentPhone(e.target.value); setVisibleInvite(null); setIssuedPin(null); setManualUrl(null); }} className="bg-transparent text-white font-bold text-xs outline-none w-36" />
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-amber-300 bg-amber-950/60 px-3 py-1 rounded-xl border border-amber-600/40">

@@ -70,6 +70,13 @@ class MarketingAccessIntegrationTest {
         var issued=service.invite(actor,node(Map.of("projectId",project.toString(),"agentName","Isolated marketer","mobile",mobile)));
         String invite=(String)issued.get("invitationToken"),temporary=(String)issued.get("temporaryPin");
         assertNotNull(temporary); assertTrue((Boolean)issued.get("created"));
+        var deadline=java.time.Instant.parse((String)issued.get("activationExpiresAt"));
+        assertEquals(jdbc.queryForObject("SELECT expires_at FROM sos.marketing_invitations WHERE agent_id=(SELECT id FROM sos.marketing_agents WHERE mobile=?)",
+            java.sql.Timestamp.class,mobile).toInstant(),deadline);
+        jdbc.update("UPDATE sos.marketing_invitations SET expires_at=now()-interval '1 second' WHERE agent_id=(SELECT id FROM sos.marketing_agents WHERE mobile=?)",mobile);
+        assertThrows(ApiProblem.class,()->service.info(invite),"An unactivated invitation must expire");
+        jdbc.update("UPDATE sos.marketing_invitations SET expires_at=? WHERE agent_id=(SELECT id FROM sos.marketing_agents WHERE mobile=?)",
+            java.sql.Timestamp.from(deadline),mobile);
         assertFalse(service.info(invite).containsKey("mobile"));
         http.perform(get("/api/marketing/access/invitation").param("invite",invite)).andExpect(status().isOk());
         http.perform(get("/api/marketing/projects/"+project+"/proposals")).andExpect(status().isUnauthorized());
@@ -88,6 +95,8 @@ class MarketingAccessIntegrationTest {
         session=service.changePin(token,node(Map.of("invite",invite,"newPin","654321")));
         token=(String)session.get("token"); String permanentSession=token;
         assertFalse((Boolean)session.get("mustChangePin"));
+        jdbc.update("UPDATE sos.marketing_invitations SET expires_at=now()-interval '1 second' WHERE agent_id=(SELECT id FROM sos.marketing_agents WHERE mobile=?)",mobile);
+        assertDoesNotThrow(()->service.info(invite),"Activation deadline does not revoke activated access");
         assertEquals("EMPTY",service.blueprint(token,invite).get("status"));
         assertNull(service.blueprint(token,invite).get("confirmed"));
         var geometry=json.readTree("""

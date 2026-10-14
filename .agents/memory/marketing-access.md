@@ -26,3 +26,9 @@ Marketing presentations may share the current confirmed illustrative layout and 
 **Why:** Marketing employees need to present the accountant-approved venture layout to customers without receiving financial access or anonymous public sharing.
 
 **How to apply:** Preserve personal project invitations, initial credential change and live revocation checks for any new presentation surface. Treat nested drawing extensions as private unless explicitly approved for sharing.
+
+Describe invitation deadlines as first-use activation deadlines, not automatic termination of already activated access. Keep activation, session expiry and access revocation distinct.
+
+**Why:** The user asked to see when marketing links expire, not to change the access policy. Calling the activation deadline a fixed access cutoff would mislead both staff and employees.
+
+**How to apply:** Display the server-issued deadline with a timezone, never a deadline invented from development defaults. Renewing a link must not reset an activated employee's PIN or claim that the previous activated link was revoked.

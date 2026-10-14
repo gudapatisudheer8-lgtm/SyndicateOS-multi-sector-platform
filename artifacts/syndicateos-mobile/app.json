@@ -13,11 +13,6 @@
     "icon": "./assets/brand/icon.png",
     "scheme": "syndicateos-mobile",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "backgroundColor": "#f6f4ec",
-      "image": "./assets/brand/logo-stacked.png",
-      "resizeMode": "contain"
-    },
     "ios": {
       "supportsTablet": false
     },
@@ -50,7 +45,8 @@
             "backgroundColor": "#f6f4ec"
           }
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,
