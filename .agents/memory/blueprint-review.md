@@ -21,8 +21,8 @@ Provider configuration is not proof that image extraction works.
 
 **How to apply:** Verify an actual image request before calling AI extraction ready. Do not hide upstream errors or keep spending credits on repeated failing checks. A separate manual review path may still be delivered honestly.
 
-On mobile, a confirmed venture layout should open as a compact 3D presentation by default, with one accountant-only edit/recreate entry. Keep editor tools and tabs out of the resting presentation and use finger gestures rather than zoom, rotate or tilt button rows.
+On mobile, Venture layout and Project Layout Summary should be independently collapsed by default. Expanding a confirmed venture layout shows a compact 3D presentation with one accountant-only edit/recreate entry. Keep editor tools and tabs out of the resting presentation and use finger gestures rather than zoom, rotate or tilt button rows.
 
-**Why:** The user found that the editor and persistent viewer controls occupied too much of the phone screen after the layout was already saved.
+**Why:** The user found that the editor and persistent viewer controls occupied too much of the phone screen after the layout was already saved, then requested both layout sections stay hidden until tapped.
 
-**How to apply:** Apply this to native and mobile-browser presentation. Entering editing must not itself regenerate anything or erase saved geometry; keep the confirmed view until a replacement is explicitly confirmed.
+**How to apply:** Apply this to native and mobile-browser presentation. Collapse only the named sections, never the inventory and plot list below them. Hiding or entering editing must not regenerate anything or erase edits; keep the confirmed view until a replacement is explicitly confirmed.
