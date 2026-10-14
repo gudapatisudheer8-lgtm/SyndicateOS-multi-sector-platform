@@ -1,7 +1,9 @@
 import React, { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { changeCredential, getMe, login, resolveCompany, useReadinessCheck, type LoginInput } from '@workspace/api-client-react';
 import { BrandBackdrop, BrandLogo } from '@/components/Brand';
+import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { PinField } from '@/components/PinField';
 import { Banner, Btn, Card, Field } from '@/components/ui';
 import { useColors } from '@/hooks/useColors';
@@ -17,14 +19,25 @@ function utf8Len(v: string) {
 }
 
 function Frame({ children }: { children: React.ReactNode }) {
+  const insets = useSafeAreaInsets();
   return (
     <BrandBackdrop>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={st.frame} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" automaticallyAdjustKeyboardInsets>
+      <KeyboardAwareScrollViewCompat
+        style={{ flex: 1 }}
+        contentContainerStyle={[
+          st.frame,
+          { paddingTop: Math.max(24, insets.top + 12), paddingBottom: Math.max(24, insets.bottom + 24) },
+        ]}
+        bottomOffset={24}
+        extraKeyboardSpace={20}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         <View style={st.brand}>
           <BrandLogo width={240} />
         </View>
         <View style={{ width: '100%', maxWidth: 440 }}>{children}</View>
-      </ScrollView>
+      </KeyboardAwareScrollViewCompat>
     </BrandBackdrop>
   );
 }

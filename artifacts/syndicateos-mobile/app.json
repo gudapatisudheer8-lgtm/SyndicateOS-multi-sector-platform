@@ -8,7 +8,7 @@
         "projectId": "2e26af93-eb82-40e1-8910-9209003b0275"
       }
     },
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/brand/icon.png",
     "scheme": "syndicateos-mobile",
@@ -23,6 +23,8 @@
     },
     "android": {
       "package": "in.krishisetu9.syndicateos",
+      "versionCode": 2,
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/brand/adaptive-foreground.png",
         "backgroundColor": "#F59E0B"
@@ -40,7 +42,13 @@
           "image": "./assets/brand/logo-stacked.png",
           "imageWidth": 220,
           "resizeMode": "contain",
-          "backgroundColor": "#f6f4ec"
+          "backgroundColor": "#f6f4ec",
+          "android": {
+            "image": "./assets/brand/splash-android-safe.png",
+            "imageWidth": 288,
+            "resizeMode": "contain",
+            "backgroundColor": "#f6f4ec"
+          }
         }
       ]
     ],

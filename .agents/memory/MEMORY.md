@@ -19,3 +19,4 @@
 - [Native Android build limits](native-android-build-limits.md) — SDK/NDK/Gradle can exceed writable quota despite free host disk; prefer a remote builder.
 - [Expo build toolchain](expo-build-toolchain.md) — pin remote package-manager versions to the validated workspace version; preserve targeted script approvals and lockfile checks.
 - [Android APK verification](android-apk-verification.md) — archive-tool extra-field warnings alone do not prove APK corruption; separate integrity, signing and device compatibility.
+- [Native auth layout](native-auth-layout.md) — Android system splash masking needs padded artwork; native login fields need keyboard-aware scrolling, not just browser verification.
