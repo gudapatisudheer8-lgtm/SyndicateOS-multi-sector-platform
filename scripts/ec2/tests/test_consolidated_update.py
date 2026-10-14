@@ -29,7 +29,7 @@ class UpdateSafetyTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content)
         meta = {"update": "sos-consolidated-20261012", "base_release": update.BASE,
-                "schema_version": 22, "api_sha256": update.digest(root / "sos-api.jar"),
+                "schema_version": 23, "api_sha256": update.digest(root / "sos-api.jar"),
                 "index_sha256": update.digest(root / "web/index.html")}
         (root / "update.json").write_text(json.dumps(meta))
         (root / "FILES.sha256").write_text("".join(
@@ -103,7 +103,7 @@ class UpdateSafetyTests(unittest.TestCase):
         with patch.object(update, "query", return_value=json.dumps(self.db())), patch.object(update, "output", return_value="pg_dump (PostgreSQL) 17.4"):
             self.assertEqual(update.database_check({})["version"], 19)
         for wrong in (self.db(database="other"), self.db(role="sos_runtime"),
-                      self.db(owners=0), self.db(failed=1), self.db(version=23)):
+                      self.db(owners=0), self.db(failed=1), self.db(version=24)):
             with patch.object(update, "query", return_value=json.dumps(wrong)):
                 with self.assertRaises(RuntimeError):
                     update.database_check({})
@@ -115,7 +115,7 @@ class UpdateSafetyTests(unittest.TestCase):
         sql = (SCRIPT.parent / "sql/03_update_runtime_permissions.sql").read_text()
         self.assertIn("current_database() <> 'sos'", sql)
         self.assertIn("current_user <> 'sos_deploy'", sql)
-        self.assertIn("version='22'", sql)
+        self.assertIn("version='23'", sql)
         self.assertNotIn("UPDATE sos.erp_records", sql)
         source = SCRIPT.read_text()
         self.assertIn('"--sos.upgrade-only=true"', source)
@@ -156,7 +156,7 @@ class UpdateSafetyTests(unittest.TestCase):
                                     BACKUPS=backups, OVERRIDE=override), \
                      patch.object(update, "run", side_effect=execute), \
                      patch.object(update, "output", return_value=self.command("/opt/syndicateos/current/sos-api.jar")), \
-                     patch.object(update, "database_check", side_effect=[self.db(), self.db(version=22)]), \
+                     patch.object(update, "database_check", side_effect=[self.db(), self.db(version=23)]), \
                      patch.object(update, "https", return_value=b'{"status":"ready"}'), \
                      patch.object(update, "verify", side_effect=RuntimeError("simulated activation failure") if failure == "activation" else None), \
                      patch.object(update.shutil, "disk_usage", return_value=type("Disk", (), {"free": 10**12})()), \

@@ -3,7 +3,9 @@
 import argparse
 import hashlib
 import html
+import importlib.util
 import json
+import os
 import re
 from pathlib import Path
 import shutil
@@ -48,11 +50,36 @@ pre{overflow-x:auto;padding:18px;background:#111827;color:#f5f5f5;border-radius:
 @media(max-width:600px){main{padding:18px;margin:12px}h1{font-size:23px}}</style><main>""" + "".join(blocks) + "</main></html>"
 
 
+def stage_mobile(stage, release, web_release):
+    """Reuse the proven /mobile exporter and guarded installer, matched to this new API/web."""
+    spec = importlib.util.spec_from_file_location("sos_mobile_export", ROOT / "scripts/ec2/build-mobile-update.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    package = stage / "mobile-package"
+    module.export_mobile_web(package / "mobile", {**os.environ, "CI": "1", "EXPO_PUBLIC_DOMAIN": "sos.krishisetu9.in"})
+    if "/mobile/_expo/" not in (package / "mobile/index.html").read_text():
+        raise RuntimeError("Mobile export did not preserve /mobile paths.")
+    assets = []
+    for suffix in (".js", ".ttf", ".png"):
+        files = sorted(path for path in (package / "mobile").rglob("*") if path.is_file() and path.suffix == suffix)
+        if not files:
+            raise RuntimeError("Mobile export missing verification asset: " + suffix)
+        assets.append(str(files[0].relative_to(package / "mobile")))
+    meta = {"release": release, "mobile_base": "/mobile", "api_origin": "https://sos.krishisetu9.in",
+            "existingWebRelease": web_release, "verifyAssets": assets}
+    (package / "mobile/release.json").write_text(json.dumps(meta, indent=2) + "\n")
+    shutil.copyfile(ROOT / "scripts/ec2/mobile-update.py", package / "install.py")
+    shutil.copyfile(ROOT / "scripts/ec2/syndicateos-mobile.nginx.conf", package / "mobile.nginx.conf")
+    manifest = {str(path.relative_to(package)): digest(path) for path in sorted(package.rglob("*")) if path.is_file()}
+    (package / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+
+
 def main():
     global FIX, STAGE, ARCHIVE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release-name", default=FIX)
     parser.add_argument("--guide-source", default="docs/sos-consolidated-ec2-update.md")
+    parser.add_argument("--include-mobile", action="store_true", help="Include the matched /mobile export and its installer.")
     args = parser.parse_args()
     if not re.fullmatch(r"sos-consolidated-[a-z0-9-]{1,50}", args.release_name):
         raise SystemExit("Invalid release name.")
@@ -71,8 +98,8 @@ def main():
     if "/assets/" not in index or "/syndicateos-web/" in index or "/@vite/" in index or "banner-script.js" in index:
         raise SystemExit("Build the current production frontend at BASE_PATH=/ first.")
     files = sorted(migrations.glob("V*.sql"))
-    if sorted(int(path.name.split("__")[0][1:]) for path in files) != list(range(1, 23)):
-        raise SystemExit("Expected exactly V1–V22.")
+    if sorted(int(path.name.split("__")[0][1:]) for path in files) != list(range(1, 24)):
+        raise SystemExit("Expected exactly V1–V23.")
     baseline = OUT / "sos-fresh-ec2-20261010/migrations"
     for prior in (baseline, OUT / "sos-consolidated-20261013-plot-payments/migrations"):
         for path in prior.glob("V*.sql"):
@@ -93,17 +120,21 @@ def main():
     shutil.copytree(migrations, STAGE / "migrations")
     documentation = guide_source.read_text()
     (STAGE / "README.md").write_text(documentation)
-    meta = {"update": FIX, "base_release": "sos-fresh-ec2-20261010", "schema_version": 22,
+    meta = {"update": FIX, "base_release": "sos-fresh-ec2-20261010", "schema_version": 23,
             "api_sha256": digest(jar), "index_sha256": digest(web / "index.html"),
             "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()}
     (STAGE / "update.json").write_text(json.dumps(meta, indent=2) + "\n")
     (STAGE / "web/release.json").write_text(json.dumps({
-        "release": meta["base_release"], "schema_version": "22", "frontend_base": "/",
+        "release": meta["base_release"], "schema_version": "23", "frontend_base": "/",
         "frontend_fix": FIX, "api_sha256": meta["api_sha256"],
     }, indent=2) + "\n")
+    if args.include_mobile:
+        stage_mobile(STAGE, FIX.replace("sos-consolidated-", "sos-mobile-", 1),
+                     json.loads((STAGE / "web/release.json").read_text()))
     source_hashes = {}
     for directory in ("artifacts/syndicateos-web/src", "artifacts/api-server/src", "artifacts/syndicateos-mobile/app",
                       "artifacts/syndicateos-mobile/src", "artifacts/syndicateos-mobile/components",
+                      "artifacts/syndicateos-mobile/screens", "artifacts/syndicateos-mobile/lib",
                       "lib/api-spec", "lib/api-client-react/src", "scripts/ec2"):
         for path in (ROOT / directory).rglob("*"):
             if (path.is_file() and not path.name.startswith(".env")
@@ -157,7 +188,9 @@ Keep the private backup path it prints. Do NOT run any old fresh-install command
 
 """
     guide = OUT / f"{FIX}-Deployment-Guide.html"
-    guide.write_text(render_document(handoff + documentation))
+    content = documentation.replace("{{SHA256}}", checksum) if args.include_mobile else handoff + documentation
+    (OUT / f"{FIX}-Instructions.md").write_text(content)
+    guide.write_text(render_document(content))
     print("Archive:", ARCHIVE.relative_to(ROOT))
     print("SHA256:", checksum)
     print("Guide:", guide.relative_to(ROOT))

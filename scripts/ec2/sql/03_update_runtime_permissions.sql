@@ -5,9 +5,9 @@ BEGIN
   IF current_database() <> 'sos' OR current_user <> 'sos_deploy' THEN
     RAISE EXCEPTION 'Update permissions require sos_deploy in lowercase sos.';
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM sos.flyway_schema_history WHERE version='22' AND success)
+  IF NOT EXISTS (SELECT 1 FROM sos.flyway_schema_history WHERE version='23' AND success)
      OR NOT EXISTS (SELECT 1 FROM sos.owner_memberships) THEN
-    RAISE EXCEPTION 'V22 migrations or existing owner are missing.';
+    RAISE EXCEPTION 'V23 migrations or existing owner are missing.';
   END IF;
 END
 $guard$;

@@ -806,3 +806,31 @@ mtime_ms = 1791915324999
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:1009d9c2-b863-401d-baa1-ced63916b66e/55018ad5-0fc4-4b84-bd5e-be53c7b3401f/5378782c-d462-4f91-a5cb-b96018bcf98d"
 storage_version_token = "1791915443430637"
 content_type = "video/mp4"
+
+[[outputs]]
+id = "xd1InJmMClDMK54S5AM7R"
+uri = "file://generated-artifacts/ec2/sos-consolidated-20261015-open-plots.tar.gz"
+type = "unspecified"
+title = "SyndicateOS — consolidated EC2 release"
+description = "Matched API, web and mobile-web update, including schema 23 and all recent Open Plotting changes. Approximately 43 MB. Not an APK or OTA update."
+logical_id = "b94501be-d3ee-4f40-bc0c-4b14882cc9bf"
+content_hash = "sha256:755972cec7cf36b1dcb13fcb111b4f3f724a8d3eb4bb2e9733b3a35247d818b0"
+size = 43066698
+mtime_ms = 1792010647744
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:1009d9c2-b863-401d-baa1-ced63916b66e/b94501be-d3ee-4f40-bc0c-4b14882cc9bf/ae45b665-9e3d-424d-9c84-02da81bc4257"
+storage_version_token = "1792010770833029"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "062hMUnocLmZYHYzBJnBT"
+uri = "file://generated-artifacts/ec2/sos-consolidated-20261015-open-plots-Deployment-Guide.html"
+type = "html"
+title = "EC2 deployment instructions"
+description = "Exact PowerShell upload, checksum verification, API/web and mobile installation, checks, maintenance-window requirements and recovery instructions."
+logical_id = "e69bded1-bec9-4911-afc0-9803c718cc80"
+content_hash = "sha256:bfca4d5d2d5903acf1bcfbeda4df328845ace60708c7d09a4fb7f9cba939bf66"
+size = 10490
+mtime_ms = 1792010647811
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:1009d9c2-b863-401d-baa1-ced63916b66e/e69bded1-bec9-4911-afc0-9803c718cc80/0719ebfc-7075-4112-8696-5527035b4880"
+storage_version_token = "1792010772090992"
+content_type = "text/html"

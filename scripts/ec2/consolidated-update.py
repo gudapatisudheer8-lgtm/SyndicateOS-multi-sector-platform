@@ -25,7 +25,7 @@ OVERRIDE = Path("/etc/systemd/system/syndicateos-api.service.d/zz-sos-consolidat
 BACKUPS = Path("/opt/syndicateos-update-backups")
 SERVICE = "syndicateos-api"
 BASE = "sos-fresh-ec2-20261010"
-SCHEMA = 22
+SCHEMA = 23
 SAFE_ENV = {"PATH": "/usr/bin:/bin", "HOME": "/root", "LANG": "C.UTF-8"}
 
 
@@ -159,7 +159,7 @@ def database_check(env):
         'server',current_setting('server_version_num')::integer,
         'size',pg_database_size(current_database()))"""))
     if (result["database"] != "sos" or result["role"] != "sos_deploy" or result["owners"] < 1
-            or result["failed"] or result["version"] not in (19, 20, 21, 22)):
+            or result["failed"] or result["version"] not in (19, 20, 21, 22, 23)):
         raise RuntimeError("Unexpected database target, owner or migration history; no changes made.")
     client = re.search(r"(\d+)\.", output(["pg_dump", "--version"]))
     if not client or int(client[1]) < result["server"] // 10000:
@@ -231,7 +231,7 @@ def install(meta, target):
         raise RuntimeError("Not enough local free space for the versioned release and backups.")
     destination = HOME / "releases" / meta["update"]
     command = api_command(output(["systemctl", "cat", SERVICE]), destination / "sos-api.jar")
-    if input("Brief downtime; back up lowercase sos and uploads, then upgrade to V22. Type UPDATE SOS: ").strip().upper() != "UPDATE SOS":
+    if input(f"Brief downtime; back up lowercase sos and uploads, then upgrade to V{SCHEMA}. Type UPDATE SOS: ").strip().upper() != "UPDATE SOS":
         print("Cancelled. No service or database changes made.")
         return
     os.umask(0o077)
@@ -306,7 +306,7 @@ def install(meta, target):
         verify(meta, target, wait=120)
         state["phase"] = "installed"
         save_state(backup, state)
-        print("Schema V22 verified. Existing owner, firm assignments, credentials and uploads preserved.")
+        print(f"Schema V{SCHEMA} verified. Existing owner, firm assignments, credentials and uploads preserved.")
         print("Original checksummed deployment preserved. Complete README.md signed-in acceptance checks.")
         print("Permanent verifier:", destination / "update.py")
     except BaseException:
