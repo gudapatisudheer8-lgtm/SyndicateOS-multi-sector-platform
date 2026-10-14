@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { NativeBlueprint } from '@/screens/NativeBlueprint';
+import { NativeMarketingShare } from '@/screens/NativeMarketingShare';
+import { CollapsibleSection } from '@/components/CollapsibleSection';
+import { useWorkspace } from '@/lib/workspace';
 import { PartnerEquityNative } from '@/screens/PartnerEquityNative';
 import { NativePlotCollections } from '@/screens/NativePlotCollections';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -161,7 +164,7 @@ export function LayoutMasterGrid({ erp, ctx, onBook }: { erp: ProjectErp; ctx: E
   return (
     <View>
       <Title sub={partner ? t('plotsSubtitle') : 'Directional master layout with live status, dimensions, rates and buyers.'}>{partner ? t('plotsInventory') : 'Venture Layout Master Grid'}</Title>
-      {!partner ? <LayoutSummary details={(ctx.project?.details ?? {}) as Record<string, unknown>} count={plots.length} area={sellable} /> : null}
+      {!partner ? <CollapsibleSection key={`summary-${ctx.project?.id ?? 'none'}`} title="Project Layout Summary" sub="Saved setup values and recorded plots" testID="toggle-layout-summary"><LayoutSummary details={(ctx.project?.details ?? {}) as Record<string, unknown>} count={plots.length} area={sellable} /></CollapsibleSection> : null}
       <Card style={{ padding: 12 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <View><Text style={{ color: c.mutedForeground, fontSize: 10, fontFamily: 'Inter_700Bold' }}>{(partner ? t('totalPlots') : 'Total plotted inventory').toUpperCase()}</Text><Text style={{ color: c.foreground, fontFamily: 'Inter_700Bold', fontSize: 22 }}>{plots.length}</Text></View>
@@ -607,7 +610,35 @@ function Settings({ erp, ctx }: { erp: ProjectErp; ctx: ErpCtx }) {
 
 /** Both configured plot routes use the same server-gated presentation and existing inventory. */
 function PlotWorkspace({ erp, ctx }: { erp: ProjectErp; ctx: ErpCtx }) {
-  return <View>{ctx.project ? <NativeBlueprint projectId={ctx.project.id} erp={erp} /> : null}<Plots erp={erp} ctx={ctx} /></View>;
+  // Keyed by project + account so collapse and invitation state reset on scope change, not on ERP refresh.
+  return <PlotWorkspaceScoped key={`${ctx.project?.id ?? 'none'}|${ctx.account.identityId}|${ctx.account.role}`} erp={erp} ctx={ctx} />;
+}
+function PlotWorkspaceScoped({ erp, ctx }: { erp: ProjectErp; ctx: ErpCtx }) {
+  const c = useColors();
+  const ws = useWorkspace(true).data;
+  const [sharing, setSharing] = useState(false);
+  const project = ctx.project;
+  const canInvite = !!project && ctx.account.role === 'ACCOUNTANT' && !!resOf(erp, 'bookings')?.canCreate;
+  const firmName = ws?.firms.find((f) => f.id === project?.firmId)?.name;
+  return (
+    <View>
+      {canInvite && project ? (
+        <Pressable testID="open-marketing-share" disabled={!firmName} onPress={() => setSharing(true)} accessibilityRole="button" accessibilityState={{ disabled: !firmName }} accessibilityLabel="Marketing Portal and Share Link" accessibilityHint="Opens a sheet to invite an agent with a personal link"
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52, padding: 12, borderRadius: 14, backgroundColor: c.foreground, marginBottom: 10 }}>
+          <View style={{ width: 6, alignSelf: 'stretch', borderRadius: 3, backgroundColor: AMBER }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: c.background, fontFamily: 'Inter_700Bold', fontSize: 15 }}>Marketing Portal & Share Link</Text>
+            <Text numberOfLines={1} style={{ color: c.background, opacity: 0.75, fontSize: 11 }}>Personal agent invitation for {project.name}</Text>
+          </View>
+          <Text style={{ color: AMBER, fontFamily: 'Inter_700Bold', fontSize: 12 }}>Open</Text>
+        </Pressable>
+      ) : null}
+      {canInvite && !firmName ? <Text style={{ color: c.mutedForeground, marginBottom: 10 }}>Firm details are unavailable. Refresh before sharing an invitation.</Text> : null}
+      {project ? <CollapsibleSection title="Venture layout" sub="Confirmed layout, 3D scene and editor" testID="toggle-venture-layout"><NativeBlueprint projectId={project.id} erp={erp} /></CollapsibleSection> : null}
+      <Plots erp={erp} ctx={ctx} />
+      {sharing && canInvite && project && firmName ? <NativeMarketingShare projectId={project.id} projectName={project.name} firmName={firmName} onClose={() => setSharing(false)} /> : null}
+    </View>
+  );
 }
 
 registerBespoke((key, props, erp, ctx) => {
