@@ -39,6 +39,12 @@ public class MarketingController {
     public Map<String,Object> inventory(@RequestHeader(value="X-Marketing-Session",required=false) String token,@RequestParam String invite) {
         return service.inventory(token,invite);
     }
+    @GetMapping("/access/blueprint")
+    public org.springframework.http.ResponseEntity<Map<String,Object>> blueprint(
+        @RequestHeader(value="X-Marketing-Session",required=false) String token,@RequestParam String invite) {
+        return org.springframework.http.ResponseEntity.ok()
+            .cacheControl(org.springframework.http.CacheControl.noStore()).body(service.blueprint(token,invite));
+    }
     @PostMapping("/access/proposals")
     public Map<String,Object> submit(@RequestHeader(value="X-Marketing-Session",required=false) String token,@RequestBody JsonNode body) {
         return service.submit(token,body);

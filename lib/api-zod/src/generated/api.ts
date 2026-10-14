@@ -8,6 +8,65 @@
 import * as zod from 'zod';
 
 
+/**
+ * Private read-only presentation for the session's personal project invitation. Requires the initial PIN change. Never returns drafts, attachments, contacts or money.
+ */
+export const GetMarketingBlueprintQueryParams = zod.object({
+  "invite": zod.coerce.string()
+})
+
+export const GetMarketingBlueprintHeader = zod.object({
+  "X-Marketing-Session": zod.string()
+})
+
+export const GetMarketingBlueprintResponse = zod.object({
+  "status": zod.enum(['EMPTY', 'CONFIRMED']),
+  "confirmed": zod.union([zod.object({
+  "northDegrees": zod.number().nullable(),
+  "aspectRatio": zod.number().optional(),
+  "scale": zod.object({
+  "widthFeet": zod.number(),
+  "heightFeet": zod.number(),
+  "provenance": zod.enum(['schematic', 'user-entered'])
+}).optional(),
+  "boundary": zod.object({
+  "points": zod.array(zod.object({
+  "x": zod.number(),
+  "y": zod.number()
+}))
+}).optional(),
+  "plots": zod.array(zod.object({
+  "number": zod.string(),
+  "facing": zod.enum(['E', 'N', 'W', 'S', 'NE', 'NW', 'SE', 'SW', 'UNKNOWN']),
+  "referenceOnly": zod.boolean(),
+  "points": zod.array(zod.object({
+  "x": zod.number(),
+  "y": zod.number()
+}))
+})),
+  "roads": zod.array(zod.object({
+  "name": zod.string(),
+  "widthFeet": zod.number().nullable(),
+  "points": zod.array(zod.object({
+  "x": zod.number(),
+  "y": zod.number()
+}))
+})),
+  "parks": zod.array(zod.object({
+  "name": zod.string(),
+  "points": zod.array(zod.object({
+  "x": zod.number(),
+  "y": zod.number()
+}))
+}))
+}),zod.null()]).optional().describe('Absent or null when no layout has been confirmed.'),
+  "plots": zod.array(zod.object({
+  "plotNumber": zod.string(),
+  "status": zod.enum(['available', 'reserved', 'blocked', 'sold'])
+}))
+})
+
+
 export const GetProjectBlueprintParams = zod.object({
   "projectId": zod.coerce.string().uuid()
 })

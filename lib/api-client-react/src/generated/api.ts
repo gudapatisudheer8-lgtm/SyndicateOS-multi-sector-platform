@@ -28,10 +28,12 @@ import type {
   CredentialInput,
   GenerateLayoutRequest,
   GetBusinessMasters200,
+  GetMarketingBlueprintParams,
   GetProjectNotifications200,
   HealthStatus,
   LoginInput,
   LoginResult,
+  MarketingBlueprint,
   ProjectBlueprint,
   ProjectDocuments,
   ProjectErp,
@@ -71,6 +73,87 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetMarketingBlueprintUrl = (params: GetMarketingBlueprintParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/marketing/access/blueprint?${stringifiedParams}` : `/api/marketing/access/blueprint`
+}
+
+/**
+ * Private read-only presentation for the session's personal project invitation. Requires the initial PIN change. Never returns drafts, attachments, contacts or money.
+ */
+export const getMarketingBlueprint = async (params: GetMarketingBlueprintParams, options?: Parameters<typeof customFetch>[1]): Promise<MarketingBlueprint> => {
+
+  return customFetch<MarketingBlueprint>(getGetMarketingBlueprintUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMarketingBlueprintQueryKey = (params?: GetMarketingBlueprintParams,) => {
+    return [
+    `/api/marketing/access/blueprint`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetMarketingBlueprintQueryOptions = <TData = Awaited<ReturnType<typeof getMarketingBlueprint>>, TError = ErrorType<ApiFailureResponse>>(params: GetMarketingBlueprintParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMarketingBlueprint>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMarketingBlueprintQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMarketingBlueprint>>> = ({ signal }) => getMarketingBlueprint(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMarketingBlueprint>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMarketingBlueprintQueryResult = NonNullable<Awaited<ReturnType<typeof getMarketingBlueprint>>>
+export type GetMarketingBlueprintQueryError = ErrorType<ApiFailureResponse>
+
+
+
+export function useGetMarketingBlueprint<TData = Awaited<ReturnType<typeof getMarketingBlueprint>>, TError = ErrorType<ApiFailureResponse>>(
+ params: GetMarketingBlueprintParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMarketingBlueprint>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMarketingBlueprintQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetProjectBlueprintUrl = (projectId: string,) => {
 

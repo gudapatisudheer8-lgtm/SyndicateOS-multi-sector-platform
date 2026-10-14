@@ -17,7 +17,7 @@ const STATUS_FILL: Record<string, { top: string; side: string; label: string }> 
 };
 
 /** Orthographic SVG 3D view of CONFIRMED geometry. Uniform slab thickness is a display aid, not height. */
-export const Blueprint3DView: React.FC<{ geometry: Geometry; plots: Plot[] }> = ({ geometry: source, plots }) => {
+export const Blueprint3DView: React.FC<{ geometry: Geometry; plots: Pick<Plot, 'plotNumber' | 'status'>[] }> = ({ geometry: source, plots }) => {
   const geometry = useMemo(() => proportionedGeometry(source), [source]);
   const ratioKnown = !!source.aspectRatio || !!source.scale;
   const [cam, setCam] = useState<Camera>(() => fitCamera(geometry, DEFAULT_CAMERA, BASE, W, H));

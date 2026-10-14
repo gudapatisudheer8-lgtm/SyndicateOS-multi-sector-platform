@@ -198,6 +198,70 @@ public class MarketingService {
         return Map.of("project",project,"firm",Map.of("name",row.get("firm_name")),
             "agent",Map.of("name",row.get("agent_name"),"mobile",row.get("mobile")),"plots",plots,"policy",publicPolicy());
     }
+    public Map<String,Object> blueprint(String token,String invite) {
+        // Resolve the project exclusively from the validated invitation, never from caller input.
+        var who=authenticated(token,invite,false);
+        var out=new LinkedHashMap<String,Object>();
+        out.put("status","EMPTY"); out.put("confirmed",null); out.put("plots",List.of());
+        var rows=jdbc.queryForList("SELECT confirmed FROM sos.project_blueprints WHERE project_id=?",who.get("project_id"));
+        if(rows.isEmpty()||rows.getFirst().get("confirmed")==null) return out;
+        var statuses=new LinkedHashMap<String,String>();
+        var plots=new ArrayList<Map<String,Object>>();
+        for(var row:jdbc.queryForList("""
+            SELECT data->>'plotNumber' AS number,data->>'status' AS status
+            FROM sos.erp_records WHERE project_id=? AND kind='plots' AND status='approved'
+            ORDER BY created_at,id
+            """,who.get("project_id"))) {
+            String number=(String)row.get("number"),status=(String)row.get("status");
+            if(number==null||status==null||!Set.of("available","reserved","blocked","sold").contains(status)) continue;
+            statuses.put(number.trim().toLowerCase(Locale.ROOT),status);
+            plots.add(Map.of("plotNumber",number,"status",status));
+        }
+        out.put("status","CONFIRMED");
+        out.put("confirmed",presentationGeometry(object(rows.getFirst().get("confirmed")),statuses.keySet()));
+        out.put("plots",plots);
+        return out;
+    }
+    /** Rebuild every nested object: saved JSON may contain arbitrary private extension fields. */
+    private ObjectNode presentationGeometry(JsonNode source,Set<String> inventory) {
+        var g=json.createObjectNode();
+        g.set("northDegrees",source.hasNonNull("northDegrees")?source.get("northDegrees"):json.nullNode());
+        if(source.path("aspectRatio").isNumber()) g.set("aspectRatio",source.get("aspectRatio"));
+        if(source.hasNonNull("scale")) {
+            var scale=json.createObjectNode();
+            for(String k:List.of("widthFeet","heightFeet","provenance")) scale.set(k,source.path("scale").path(k));
+            g.set("scale",scale);
+        }
+        if(source.hasNonNull("boundary")) {
+            var boundary=json.createObjectNode(); boundary.set("points",presentationPoints(source.path("boundary").path("points")));
+            g.set("boundary",boundary);
+        }
+        var plots=g.putArray("plots");
+        for(var p:source.path("plots")) {
+            String number=p.path("number").asText();
+            var view=plots.addObject();
+            view.put("number",number); view.put("facing",p.path("facing").asText("UNKNOWN"));
+            view.put("referenceOnly",p.path("referenceOnly").asBoolean()||!inventory.contains(number.trim().toLowerCase(Locale.ROOT)));
+            view.set("points",presentationPoints(p.path("points")));
+        }
+        var roads=g.putArray("roads");
+        for(var r:source.path("roads")) {
+            var view=roads.addObject(); view.put("name",r.path("name").asText(""));
+            view.set("widthFeet",r.hasNonNull("widthFeet")?r.get("widthFeet"):json.nullNode());
+            view.set("points",presentationPoints(r.path("points")));
+        }
+        var parks=g.putArray("parks");
+        for(var p:source.path("parks")) {
+            var view=parks.addObject(); view.put("name",p.path("name").asText("Open space"));
+            view.set("points",presentationPoints(p.path("points")));
+        }
+        return g;
+    }
+    private JsonNode presentationPoints(JsonNode source) {
+        var points=json.createArrayNode();
+        for(var p:source) { var v=points.addObject(); v.set("x",p.path("x")); v.set("y",p.path("y")); }
+        return points;
+    }
     private BigDecimal amount(JsonNode body,String key,boolean zeroAllowed) {
         var value=body.get(key);
         if(value==null || !value.isNumber()) throw ApiProblem.invalid(key+" must be a number.");

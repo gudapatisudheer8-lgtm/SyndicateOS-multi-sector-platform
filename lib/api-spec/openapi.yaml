@@ -11,6 +11,23 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /marketing/access/blueprint:
+    get:
+      operationId: getMarketingBlueprint
+      tags: [marketing]
+      description: Private read-only presentation for the session's personal project invitation. Requires the initial PIN change. Never returns drafts, attachments, contacts or money.
+      parameters:
+        - { name: invite, in: query, required: true, schema: { type: string } }
+        - { name: X-Marketing-Session, in: header, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Current confirmed layout, or EMPTY when none has been confirmed
+          headers:
+            Cache-Control: { schema: { type: string }, description: no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MarketingBlueprint" }
+        default: { $ref: "#/components/responses/ApiFailure" }
   /erp/{projectId}/blueprint:
     get:
       operationId: getProjectBlueprint
@@ -396,6 +413,86 @@ components:
       type: object
       description: Versioned normalized 0..100 visual geometry. Parks, optional boundary, dimensional provenance and stable live plot IDs are persisted without changing inventory.
       additionalProperties: true
+    MarketingBlueprint:
+      type: object
+      additionalProperties: false
+      required: [status, plots]
+      properties:
+        status: { type: string, enum: [EMPTY, CONFIRMED] }
+        confirmed:
+          description: Absent or null when no layout has been confirmed.
+          oneOf:
+            - { $ref: "#/components/schemas/MarketingLayoutGeometry" }
+            - { type: "null" }
+        plots:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [plotNumber, status]
+            properties:
+              plotNumber: { type: string }
+              status: { type: string, enum: [available, reserved, blocked, sold] }
+    MarketingLayoutGeometry:
+      type: object
+      additionalProperties: false
+      required: [plots, roads, parks, northDegrees]
+      properties:
+        northDegrees: { type: [number, "null"] }
+        aspectRatio: { type: number }
+        scale:
+          type: object
+          additionalProperties: false
+          required: [widthFeet, heightFeet, provenance]
+          properties:
+            widthFeet: { type: number }
+            heightFeet: { type: number }
+            provenance: { type: string, enum: [schematic, user-entered] }
+        boundary:
+          type: object
+          additionalProperties: false
+          required: [points]
+          properties:
+            points: { $ref: "#/components/schemas/MarketingLayoutPoints" }
+        plots:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [number, facing, points, referenceOnly]
+            properties:
+              number: { type: string }
+              facing: { type: string, enum: [E, N, W, S, NE, NW, SE, SW, UNKNOWN] }
+              referenceOnly: { type: boolean }
+              points: { $ref: "#/components/schemas/MarketingLayoutPoints" }
+        roads:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [name, points, widthFeet]
+            properties:
+              name: { type: string }
+              widthFeet: { type: [number, "null"] }
+              points: { $ref: "#/components/schemas/MarketingLayoutPoints" }
+        parks:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [name, points]
+            properties:
+              name: { type: string }
+              points: { $ref: "#/components/schemas/MarketingLayoutPoints" }
+    MarketingLayoutPoints:
+      type: array
+      items:
+        type: object
+        additionalProperties: false
+        required: [x, y]
+        properties:
+          x: { type: number }
+          y: { type: number }
     ProjectBlueprint:
       type: object
       required: [revision, status, canManage, attachments, needsReconciliation, inventoryFingerprint]

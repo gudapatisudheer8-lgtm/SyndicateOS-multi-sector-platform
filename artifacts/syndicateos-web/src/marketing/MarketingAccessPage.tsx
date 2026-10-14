@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { MarketingBlueprint } from './MarketingBlueprint';
 import {
   marketingApi, readStored, storeSession, clearStored, MarketingApiError,
   type MarketingSession, type MarketingInventory, type MarketingPlot, type InvitationInfo,
@@ -200,6 +201,7 @@ function PinCard({ invite, session, onDone, onExpired, onCancel }: { invite: str
 function Inventory({ invite, session, tokenRef, onLogout, onExpired }: {
   invite: string; session: MarketingSession; tokenRef: React.MutableRefObject<string | null>; onLogout: () => void; onExpired: () => void;
 }) {
+  const [view, setView] = useState<'inventory' | 'layout'>('inventory');
   const [inv, setInv] = useState<MarketingInventory | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [statusF, setStatusF] = useState('all');
@@ -256,6 +258,14 @@ function Inventory({ invite, session, tokenRef, onLogout, onExpired }: {
 
   return (
     <Shell header={header}>
+      <nav className="mb-4 flex flex-wrap gap-2" aria-label="Marketing views">
+        {(['inventory', 'layout'] as const).map((key) => <button key={key} type="button"
+          aria-pressed={view === key} onClick={() => setView(key)}
+          className={`rounded-xl border px-4 py-2 text-sm font-bold ${view === key ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700'}`}>
+          {key === 'layout' ? '3D presentation' : 'Plot inventory'}
+        </button>)}
+      </nav>
+      {view === 'layout' ? <MarketingBlueprint key={invite} invite={invite} token={session.token} /> : <>
       {success && (
         <div role="status" className="mb-4 flex items-start justify-between gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-3 text-sm font-bold text-emerald-900">
           <span>{success}</span>
@@ -312,6 +322,7 @@ function Inventory({ invite, session, tokenRef, onLogout, onExpired }: {
           )}
         </>
       )}
+      </>}
       {target && inv && (
         <ProposalDialog
           invite={invite} inv={inv} plot={target} tokenRef={tokenRef}

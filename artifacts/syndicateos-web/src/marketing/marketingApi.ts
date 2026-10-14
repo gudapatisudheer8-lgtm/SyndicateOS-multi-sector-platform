@@ -1,5 +1,6 @@
 // Dedicated client for the private marketing-agent portal. It never uses the staff api()
 // adapter or bearer token; it has its own sessionStorage key and header.
+import type { MarketingBlueprint } from '@workspace/api-client-react';
 export interface MarketingPolicy { pinLength: number; deadlineHours: number; statusLabels: Record<string, string> }
 export interface InvitationInfo { projectName: string; firmName: string; agentName: string; policy: MarketingPolicy }
 export interface MarketingSession {
@@ -92,6 +93,7 @@ export const marketingApi = {
   changePin: (invite: string, newPin: string, token: string) =>
     call<MarketingSession>('/pin', { body: { invite, newPin }, token }),
   inventory: (invite: string, token: string) => call<MarketingInventory>(`/inventory${q(invite)}`, { token }),
+  blueprint: (invite: string, token: string) => call<MarketingBlueprint>(`/blueprint${q(invite)}`, { token }),
   propose: (invite: string, token: string, p: ProposalInput) =>
     call<{ id: string; status: string }>('/proposals', { token, body: { invite, ...p, requestId: crypto.randomUUID() } }),
   logout: (token: string) => call<{ ok: boolean }>('/logout', { method: 'POST', token }),

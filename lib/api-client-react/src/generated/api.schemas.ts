@@ -39,6 +39,106 @@ export interface SaveDocumentsRequest {
   documents: SaveDocumentsRequestDocumentsItem[];
 }
 
+export type MarketingBlueprintStatus = typeof MarketingBlueprintStatus[keyof typeof MarketingBlueprintStatus];
+
+
+export const MarketingBlueprintStatus = {
+  EMPTY: 'EMPTY',
+  CONFIRMED: 'CONFIRMED',
+} as const;
+
+export type MarketingBlueprintPlotsItemStatus = typeof MarketingBlueprintPlotsItemStatus[keyof typeof MarketingBlueprintPlotsItemStatus];
+
+
+export const MarketingBlueprintPlotsItemStatus = {
+  available: 'available',
+  reserved: 'reserved',
+  blocked: 'blocked',
+  sold: 'sold',
+} as const;
+
+export type MarketingBlueprintPlotsItem = {
+  plotNumber: string;
+  status: MarketingBlueprintPlotsItemStatus;
+};
+
+export type MarketingLayoutGeometryScaleProvenance = typeof MarketingLayoutGeometryScaleProvenance[keyof typeof MarketingLayoutGeometryScaleProvenance];
+
+
+export const MarketingLayoutGeometryScaleProvenance = {
+  schematic: 'schematic',
+  'user-entered': 'user-entered',
+} as const;
+
+export type MarketingLayoutPointsItem = {
+  x: number;
+  y: number;
+};
+
+export type MarketingLayoutPoints = MarketingLayoutPointsItem[];
+
+export type MarketingLayoutGeometryPlotsItemFacing = typeof MarketingLayoutGeometryPlotsItemFacing[keyof typeof MarketingLayoutGeometryPlotsItemFacing];
+
+
+export const MarketingLayoutGeometryPlotsItemFacing = {
+  E: 'E',
+  N: 'N',
+  W: 'W',
+  S: 'S',
+  NE: 'NE',
+  NW: 'NW',
+  SE: 'SE',
+  SW: 'SW',
+  UNKNOWN: 'UNKNOWN',
+} as const;
+
+export type MarketingLayoutGeometryScale = {
+  widthFeet: number;
+  heightFeet: number;
+  provenance: MarketingLayoutGeometryScaleProvenance;
+};
+
+export type MarketingLayoutGeometryBoundary = {
+  points: MarketingLayoutPoints;
+};
+
+export type MarketingLayoutGeometryPlotsItem = {
+  number: string;
+  facing: MarketingLayoutGeometryPlotsItemFacing;
+  referenceOnly: boolean;
+  points: MarketingLayoutPoints;
+};
+
+export type MarketingLayoutGeometryRoadsItem = {
+  name: string;
+  /** @nullable */
+  widthFeet: number | null;
+  points: MarketingLayoutPoints;
+};
+
+export type MarketingLayoutGeometryParksItem = {
+  name: string;
+  points: MarketingLayoutPoints;
+};
+
+export interface MarketingLayoutGeometry {
+  /** @nullable */
+  northDegrees: number | null;
+  aspectRatio?: number;
+  scale?: MarketingLayoutGeometryScale;
+  boundary?: MarketingLayoutGeometryBoundary;
+  plots: MarketingLayoutGeometryPlotsItem[];
+  roads: MarketingLayoutGeometryRoadsItem[];
+  parks: MarketingLayoutGeometryParksItem[];
+}
+
+export interface MarketingBlueprint {
+  status: MarketingBlueprintStatus;
+  /** Absent or null when no layout has been confirmed. */
+  confirmed?: MarketingLayoutGeometry | null;
+  plots: MarketingBlueprintPlotsItem[];
+}
+
 export type ProjectBlueprintStatus = typeof ProjectBlueprintStatus[keyof typeof ProjectBlueprintStatus];
 
 
@@ -611,6 +711,10 @@ export interface HealthStatus {
  * Explicit authentication, validation, conflict, permission or setup failure
  */
 export type ApiFailureResponse = ApiError;
+
+export type GetMarketingBlueprintParams = {
+invite: string;
+};
 
 export type GetProjectNotifications200ItemsItem = {
   id: string;

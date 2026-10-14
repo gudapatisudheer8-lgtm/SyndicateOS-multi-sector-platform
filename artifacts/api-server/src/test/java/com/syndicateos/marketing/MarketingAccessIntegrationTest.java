@@ -80,11 +80,46 @@ class MarketingAccessIntegrationTest {
         assertTrue((Boolean)session.get("mustChangePin"));
         String temporarySession=token;
         assertThrows(ApiProblem.class,()->service.inventory(temporarySession,invite));
+        assertThrows(ApiProblem.class,()->service.blueprint(temporarySession,invite));
+        http.perform(get("/api/marketing/access/blueprint").param("invite",invite).header("X-Marketing-Session",token))
+            .andExpect(status().isForbidden());
         http.perform(get("/api/marketing/access/inventory").param("invite",invite).header("X-Marketing-Session",token))
             .andExpect(status().isForbidden());
         session=service.changePin(token,node(Map.of("invite",invite,"newPin","654321")));
         token=(String)session.get("token"); String permanentSession=token;
         assertFalse((Boolean)session.get("mustChangePin"));
+        assertEquals("EMPTY",service.blueprint(token,invite).get("status"));
+        assertNull(service.blueprint(token,invite).get("confirmed"));
+        var geometry=json.readTree("""
+            {"plots":[{"number":"LABEL","facing":"E","points":[{"x":0,"y":0,"privateUrl":"PRIVATE_URL"},{"x":20,"y":0},{"x":20,"y":20}],
+              "buyerPhone":"PRIVATE_CONTACT","attachmentId":"PRIVATE_ATTACHMENT"}],
+              "roads":[{"name":"Approach road","widthFeet":30,"points":[{"x":0,"y":25},{"x":90,"y":25}],"notes":"PRIVATE_ROAD"}],
+              "parks":[{"name":"Park","id":"PRIVATE_ID","points":[{"x":30,"y":30},{"x":40,"y":30},{"x":40,"y":40}],"notes":"PRIVATE_PARK"}],
+              "boundary":{"points":[{"x":0,"y":0},{"x":100,"y":0},{"x":100,"y":100}],"source":"PRIVATE_SOURCE"},
+              "scale":{"widthFeet":100,"heightFeet":200,"provenance":"schematic","url":"PRIVATE_SCALE"},
+              "northDegrees":0,"notes":"PRIVATE_NOTES","downloadUrl":"PRIVATE_URL"}
+            """);
+        ((com.fasterxml.jackson.databind.node.ObjectNode)geometry.path("plots").get(0)).put("number",available.toString());
+        jdbc.update("""
+            INSERT INTO sos.project_blueprints(project_id,status,draft,confirmed,updated_by)
+            VALUES(?,'DRAFT','{"notes":"PRIVATE_DRAFT"}'::jsonb,?::jsonb,?)
+            """,project,geometry.toString(),accountant);
+        var presentation=json.valueToTree(service.blueprint(token,invite));
+        assertEquals("CONFIRMED",presentation.path("status").asText());
+        assertEquals(2,presentation.path("plots").size());
+        assertEquals(available.toString(),presentation.path("confirmed").path("plots").get(0).path("number").asText());
+        assertFalse(presentation.toString().contains("PRIVATE_"),presentation.toString());
+        assertEquals(Set.of("status","confirmed","plots"),service.blueprint(token,invite).keySet());
+        http.perform(get("/api/marketing/access/blueprint").param("invite",invite).header("X-Marketing-Session",token))
+            .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store"));
+        http.perform(get("/api/marketing/access/blueprint").param("invite",invite)).andExpect(status().isUnauthorized());
+        // Neither unapproved inventory statuses nor deleted plots are advertised as saleable.
+        jdbc.update("UPDATE sos.erp_records SET status='pending' WHERE id=?",available);
+        presentation=json.valueToTree(service.blueprint(token,invite));
+        assertEquals(1,presentation.path("plots").size());
+        assertTrue(presentation.path("confirmed").path("plots").get(0).path("referenceOnly").asBoolean());
+        jdbc.update("UPDATE sos.erp_records SET status='approved',data=jsonb_set(data,'{status}','\"reserved\"') WHERE id=?",available);
+        assertTrue(json.valueToTree(service.blueprint(token,invite)).toString().contains("reserved"));
         assertThrows(ApiProblem.class,()->service.session(temporarySession,invite));
         assertEquals(originalHash,jdbc.queryForObject("SELECT credential_hash FROM sos.identities WHERE id=?",String.class,accountant));
         assertThrows(ApiProblem.class,()->service.login(node(Map.of("invite",invite,"mobile",mobile,"pin",temporary))));
@@ -104,6 +139,28 @@ class MarketingAccessIntegrationTest {
         var repeated=service.invite(actor,node(Map.of("projectId",otherProject.toString(),"agentName","Another label","mobile",mobile)));
         assertFalse((Boolean)repeated.get("created")); assertFalse(repeated.containsKey("temporaryPin"));
         assertThrows(ApiProblem.class,()->service.inventory(permanentSession,(String)repeated.get("invitationToken")));
+        assertThrows(ApiProblem.class,()->service.blueprint(permanentSession,(String)repeated.get("invitationToken")));
+        http.perform(get("/api/marketing/access/blueprint").param("invite",(String)repeated.get("invitationToken"))
+            .header("X-Marketing-Session",token)).andExpect(status().isUnauthorized());
+        // Authorization is re-evaluated against live invitation, employee, project, firm and sector membership.
+        for(String table:List.of("marketing_invitations","marketing_agents")) {
+            String key=table.equals("marketing_invitations")?"token_hash":"mobile";
+            String value=table.equals("marketing_invitations")?MarketingService.digest(invite):mobile;
+            jdbc.update("UPDATE sos."+table+" SET enabled=false WHERE "+key+"=?",value);
+            assertThrows(ApiProblem.class,()->service.blueprint(permanentSession,invite));
+            jdbc.update("UPDATE sos."+table+" SET enabled=true WHERE "+key+"=?",value);
+        }
+        jdbc.update("UPDATE sos.projects SET status='ARCHIVED' WHERE id=?",project);
+        assertThrows(ApiProblem.class,()->service.blueprint(permanentSession,invite));
+        jdbc.update("UPDATE sos.projects SET status='ACTIVE' WHERE id=?",project);
+        jdbc.update("UPDATE sos.firms SET status='SUSPENDED' WHERE id=?",firm);
+        assertThrows(ApiProblem.class,()->service.blueprint(permanentSession,invite));
+        jdbc.update("UPDATE sos.firms SET status='ACTIVE' WHERE id=?",firm);
+        jdbc.update("UPDATE sos.firm_sector_assignments SET enabled=false WHERE firm_id=?",firm);
+        assertThrows(ApiProblem.class,()->service.blueprint(permanentSession,invite));
+        jdbc.update("UPDATE sos.firm_sector_assignments SET enabled=true WHERE firm_id=?",firm);
+        assertEquals("CONFIRMED",service.blueprint(token,invite).get("status"));
+        jdbc.update("UPDATE sos.erp_records SET data=jsonb_set(data,'{status}','\"available\"') WHERE id=?",available);
         assertThrows(ApiProblem.class,()->service.invite(new SessionAccount(accountant,"PARTNER","P",mobile,false,firm,"MKT-UNIT"),
             node(Map.of("projectId",project.toString(),"agentName","X","mobile",mobile))));
         Map<String,Object> request=new LinkedHashMap<>(Map.of("invite",invite,"plotId",available.toString(),

@@ -20,3 +20,9 @@ Do not use the new-PIN length policy to reject a temporary or previously stored 
 **Why:** The shorter temporary marketing credential was blocked when the first login screen reused permanent-PIN validation. A policy change must also not lock out existing credentials.
 
 **How to apply:** Validate the stored credential at sign-in; apply the current length policy only when setting a new credential.
+
+Marketing presentations may share the current confirmed illustrative layout and approved plot labels/statuses only. Drafts, private originals, buyer contacts and financial data must stay out of that presentation.
+
+**Why:** Marketing employees need to present the accountant-approved venture layout to customers without receiving financial access or anonymous public sharing.
+
+**How to apply:** Preserve personal project invitations, initial credential change and live revocation checks for any new presentation surface. Treat nested drawing extensions as private unless explicitly approved for sharing.
