@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, Image, Platform, Pressable, Switch, Text, TextInput, View } from 'react-native';
+import { BackHandler, Image, type GestureResponderEvent, Platform, Pressable, Switch, Text, TextInput, View } from 'react-native';
 import Svg, { Circle, G, Line as SLine, Path, Polygon, Polyline, Rect, Text as SText } from 'react-native-svg';
 import { generateProjectLayout, getProjectBlueprint, saveProjectBlueprint, type LayoutGeometry, type ProjectErp } from '@workspace/api-client-react';
 import { Badge, Banner, Btn, Card, Chips, Confirm, Skeleton } from '@/components/ui';
@@ -10,6 +10,7 @@ import { newRequestId } from '@/lib/erp';
 import { errMessage } from '@/lib/session';
 import { useRun } from '@/lib/workspace';
 import { guardLeave, registerLeaveGuard } from '@/lib/leaveGuard';
+import { NO_ANCHOR, anchorOf, closeEditorDecision, gestureStep, sceneSize, showEditEntry, showEditorReturn, ventureView, type Anchor } from '@/lib/venturePresentation';
 import {
   DEFAULT_CAMERA, FACING_LABEL, SUPPORTED_TYPES, areaSqFt, centroid, clamp, displayAspect, fitCamera, frameOf, fromFt, historyOf,
   layoutAdvisories, newId, normDeg, normalizeForEdit, normalizeLabel, pointInPolygon, project, proportionedGeometry, pushHistory,
@@ -365,14 +366,31 @@ function LayoutEditor({ hist, setHist, unmatched, disabled }: { hist: History; s
 
 /* ---- illustrative 3D (orthographic projection, same math as web Blueprint3DView) ---- */
 const STATUS_FILL: Record<string, [string, string, string]> = { available: ['#6EE7B7', '#059669', 'Available'], reserved: ['#FCD34D', '#B45309', 'Booked / reserved'], blocked: ['#D6D3D1', '#78716C', 'Blocked'], sold: ['#94A3B8', '#334155', 'Sold'], reference: ['#F5F5F4', '#A8A29E', 'Reference only'] };
-const W = 800, H3 = 520, BASE = 6, SLAB = 0.8;
-function View3D({ geometry, statusOf, presenting, onPresent }: { geometry: Geometry; statusOf: (n: string) => string | null; presenting: boolean; onPresent: (v: boolean) => void }) {
+const BASE = 6, SLAB = 0.8;
+const LEGEND: [string, string, string][] = [['#6EE7B7', '#059669', 'Available'], ['#FCD34D', '#B45309', 'Booked'], ['#94A3B8', '#334155', 'Sold'], ['#D6D3D1', '#78716C', 'Blocked'], ['#86CF98', '#2F7D4A', 'Open space'], ['#8B857B', '#57534E', 'Road']];
+/** Compact touch-only 3D scene: one finger orbits, two fingers pinch-zoom and pan. No on-screen camera controls. */
+function View3D({ geometry, statusOf }: { geometry: Geometry; statusOf: (n: string) => string | null }) {
   const c = useColors();
   const g = useMemo(() => proportionedGeometry(geometry), [geometry]);
-  const [cam, setCam] = useState<Camera>(() => fitCamera(g, DEFAULT_CAMERA, BASE, W, H3));
-  const [mode, setMode] = useState<'orbit' | 'pan'>('orbit');
-  const drag = useRef<{ x: number; y: number } | null>(null);
-  const pinch = useRef<number | null>(null);
+  const [avail, setAvail] = useState(0);
+  const { w, h } = sceneSize(avail);
+  const fit = useMemo(() => fitCamera(g, DEFAULT_CAMERA, BASE, w, h), [g, w, h]);
+  const [cam, setCam] = useState<Camera>(fit);
+  // Refit for each model (mount / project switch / new confirmation) and each scene size change.
+  useEffect(() => { setCam(fit); }, [fit]);
+  const camRef = useRef(cam); camRef.current = cam;
+  const anchor = useRef<Anchor>(NO_ANCHOR);
+  const origin = useRef({ x: 0, y: 0 });
+  const touchesOf = (e: GestureResponderEvent) => {
+    const t = e.nativeEvent.touches;
+    const list = t && t.length ? Array.from(t) : [e.nativeEvent];
+    return list.slice(0, 2).map((q) => ({ x: q.pageX - origin.current.x, y: q.pageY - origin.current.y }));
+  };
+  const step = (e: GestureResponderEvent) => {
+    const r = gestureStep(camRef.current, anchor.current, touchesOf(e), w / 2, h / 2);
+    anchor.current = r.anchor;
+    if (r.cam !== camRef.current) { camRef.current = r.cam; setCam(r.cam); }
+  };
   const faces = useMemo(() => {
     const out: { key: string; pts: string; fill: string; stroke: string; depth: number; label?: { x: number; y: number; t: string } }[] = [];
     (g.parks ?? []).forEach((k, i) => { if (k.points.length >= 3) out.push({ key: `k${i}`, pts: k.points.map((q) => project(q.x, q.y, 0.25, cam, BASE)).map((v) => `${v.sx},${v.sy}`).join(' '), fill: '#86CF98', stroke: '#2F7D4A', depth: -5e5 + i }); });
@@ -392,86 +410,67 @@ function View3D({ geometry, statusOf, presenting, onPresent }: { geometry: Geome
     });
     return out.sort((a, b) => a.depth - b.depth);
   }, [g, cam, statusOf]);
-  const nudge = (d: Partial<Camera>) => setCam((k) => ({ ...k, yaw: k.yaw + (d.yaw ?? 0), pitch: clamp(k.pitch + (d.pitch ?? 0), 15, 90), zoom: clamp(k.zoom * (d.zoom ?? 1), 0.2, 8), panX: k.panX * (d.zoom ?? 1), panY: k.panY * (d.zoom ?? 1) }));
   const north = geometry.northDegrees;
   const boundary = g.boundary?.points.length ? g.boundary.points.map((q) => project(q.x, q.y, 0, cam, BASE)) : null;
+  const fs = clamp((10 * cam.zoom) / Math.max(0.01, fit.zoom), 9, 18);
   return (
-    <Card>
-      {presenting ? <Text style={{ color: c.foreground, fontFamily: 'Inter_700Bold', fontSize: 18, marginBottom: 8 }}>Layout presentation</Text> : null}
+    <View onLayout={(e) => setAvail(e.nativeEvent.layout.width)} style={{ width: '100%', alignItems: 'center' }}>
       <View
+        testID="venture-scene"
         onStartShouldSetResponder={() => true}
         onMoveShouldSetResponder={() => true}
         onResponderTerminationRequest={() => false}
-        onResponderGrant={(e) => { drag.current = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY }; pinch.current = null; }}
-        onResponderMove={(e) => {
-          const t = e.nativeEvent.touches;
-          if (t && t.length >= 2) {
-            const dist = Math.hypot(t[0].pageX - t[1].pageX, t[0].pageY - t[1].pageY);
-            if (pinch.current) { const f = dist / pinch.current; setCam((k) => ({ ...k, zoom: clamp(k.zoom * f, 0.2, 8), panX: k.panX * f, panY: k.panY * f })); }
-            pinch.current = dist; drag.current = null; return;
-          }
-          pinch.current = null;
-          const d = drag.current; const x = e.nativeEvent.pageX, y = e.nativeEvent.pageY;
-          drag.current = { x, y };
-          if (!d) return;
-          if (mode === 'orbit') setCam((k) => ({ ...k, yaw: k.yaw + (x - d.x) * 0.5, pitch: clamp(k.pitch - (y - d.y) * 0.4, 15, 90) }));
-          else setCam((k) => ({ ...k, panX: k.panX + (x - d.x) * 1.6, panY: k.panY + (y - d.y) * 1.6 }));
-        }}
-        onResponderRelease={() => { drag.current = null; pinch.current = null; }}
-        style={{ width: '100%', aspectRatio: W / H3, backgroundColor: '#F5F1E8', borderRadius: 14, overflow: 'hidden' }}
-        accessibilityLabel="Confirmed layout scene. Drag to orbit or pan, pinch to zoom; buttons rotate, tilt and zoom.">
-        <Svg width="100%" height="100%" viewBox={`${-W / 2} ${-H3 / 2} ${W} ${H3}`} pointerEvents="none">
-          {boundary ? <Polygon points={boundary.map((v) => `${v.sx},${v.sy}`).join(' ')} fill="none" stroke="#7C2D12" strokeWidth={1.4} strokeDasharray="6,4" /> : null}
-          {g.roads.filter((r) => r.points.length < 3).map((r, i) => { const pts = r.points.map((q) => project(q.x, q.y, 0, cam, BASE)); return <Polyline key={`rl${i}`} points={pts.map((v) => `${v.sx},${v.sy}`).join(' ')} fill="none" stroke="#a8a29e" strokeWidth={Math.max(2, (r.widthFeet ?? 20) / 6) * cam.zoom} strokeLinecap="round" />; })}
+        onResponderGrant={(e) => { const ne = e.nativeEvent; origin.current = { x: ne.pageX - ne.locationX, y: ne.pageY - ne.locationY }; anchor.current = anchorOf(touchesOf(e)); }}
+        onResponderMove={step}
+        onResponderRelease={() => { anchor.current = NO_ANCHOR; }}
+        onResponderTerminate={() => { anchor.current = NO_ANCHOR; }}
+        style={[{ width: w, height: h, backgroundColor: '#F5F1E8', borderRadius: 14, overflow: 'hidden' }, Platform.OS === 'web' ? ({ touchAction: 'none' } as object) : null]}
+        accessibilityLabel="Confirmed venture layout in 3D. Drag with one finger to rotate, pinch to zoom, drag with two fingers to move.">
+        <Svg width={w} height={h} viewBox={`${-w / 2} ${-h / 2} ${w} ${h}`} pointerEvents="none">
+          {boundary ? <Polygon points={boundary.map((v) => `${v.sx},${v.sy}`).join(' ')} fill="none" stroke="#7C2D12" strokeWidth={1.2} strokeDasharray="5,3" /> : null}
+          {g.roads.filter((r) => r.points.length < 3).map((r, i) => { const pts = r.points.map((q) => project(q.x, q.y, 0, cam, BASE)); return <Polyline key={`rl${i}`} points={pts.map((v) => `${v.sx},${v.sy}`).join(' ')} fill="none" stroke="#a8a29e" strokeWidth={Math.max(2, ((r.widthFeet ?? 20) / 6) * cam.zoom)} strokeLinecap="round" />; })}
           {faces.map((f) => (
             <G key={f.key}>
-              <Polygon points={f.pts} fill={f.fill} stroke={f.stroke} strokeWidth={1} />
-              {f.label ? <SText x={f.label.x} y={f.label.y + 4} fontSize={11 * Math.min(1.6, Math.max(0.7, cam.zoom))} fontWeight="bold" fill="#1c1917" stroke="#FBF8F1" strokeWidth={0.6} textAnchor="middle">{f.label.t}</SText> : null}
+              <Polygon points={f.pts} fill={f.fill} stroke={f.stroke} strokeWidth={0.8} />
+              {f.label ? <SText x={f.label.x} y={f.label.y + fs * 0.35} fontSize={fs} fontWeight="bold" fill="#1c1917" stroke="#FBF8F1" strokeWidth={0.5} textAnchor="middle">{f.label.t}</SText> : null}
             </G>
           ))}
           {north != null ? (
-            <G transform={`translate(${W / 2 - 46} ${-H3 / 2 + 46}) rotate(${north - cam.yaw})`}>
-              <Circle r={26} fill="#FFFBEB" stroke="#d6d3d1" />
-              <SLine x1={0} y1={14} x2={0} y2={-18} stroke="#b45309" strokeWidth={3} />
-              <Path d="M0,-22 L5,-12 L-5,-12 Z" fill="#b45309" />
-              <SText x={0} y={22} fontSize={11} fontWeight="bold" fill="#1c1917" textAnchor="middle">N</SText>
+            <G transform={`translate(${w / 2 - 24} ${-h / 2 + 24}) rotate(${north - cam.yaw})`}>
+              <Circle r={15} fill="#FFFBEB" stroke="#d6d3d1" />
+              <SLine x1={0} y1={8} x2={0} y2={-10} stroke="#b45309" strokeWidth={2} />
+              <Path d="M0,-13 L3.5,-7 L-3.5,-7 Z" fill="#b45309" />
+              <SText x={0} y={13} fontSize={7} fontWeight="bold" fill="#1c1917" textAnchor="middle">N</SText>
             </G>
           ) : null}
         </Svg>
       </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-        <Chips label="Drag mode" options={[{ value: 'orbit', label: 'Orbit' }, { value: 'pan', label: 'Pan' }]} value={mode} onChange={(v) => setMode(v as 'orbit' | 'pan')} />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 10, rowGap: 4, marginTop: 8, maxWidth: w }}>
+        {LEGEND.map(([f, s, l]) => <View key={l} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: f, borderWidth: 1, borderColor: s }} /><Text style={{ color: c.mutedForeground, fontSize: 10 }}>{l}</Text></View>)}
       </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-        <Btn label="Rotate left" variant="ghost" onPress={() => nudge({ yaw: -15 })} />
-        <Btn label="Rotate right" variant="ghost" onPress={() => nudge({ yaw: 15 })} />
-        <Btn label="Tilt up" variant="ghost" onPress={() => nudge({ pitch: 8 })} />
-        <Btn label="Tilt down" variant="ghost" onPress={() => nudge({ pitch: -8 })} />
-        <Btn label="Zoom in" variant="ghost" onPress={() => nudge({ zoom: 1.2 })} />
-        <Btn label="Zoom out" variant="ghost" onPress={() => nudge({ zoom: 1 / 1.2 })} />
-        <Btn label="Reset view" variant="ghost" onPress={() => setCam(fitCamera(g, DEFAULT_CAMERA, BASE, W, H3))} />
-        <Btn label={presenting ? 'Exit presentation' : 'Customer presentation'} icon={presenting ? 'x' : 'monitor'} onPress={() => onPresent(!presenting)} />
-      </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8 }}>
-        {Object.entries(STATUS_FILL).map(([k, [f, s, l]]) => <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: f, borderWidth: 1, borderColor: s }} /><Text style={{ color: c.mutedForeground, fontSize: 11 }}>{l}</Text></View>)}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: '#86CF98' }} /><Text style={{ color: c.mutedForeground, fontSize: 11 }}>Open space</Text></View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: '#8B857B' }} /><Text style={{ color: c.mutedForeground, fontSize: 11 }}>Road</Text></View>
-      </View>
-      <Text style={{ color: c.mutedForeground, fontSize: 11, marginTop: 6 }}>Illustrative SVG view of the confirmed layout (no WebGL needed). Schematic placement, uniform slab height; not a survey or legal approval.{north == null ? ' North is unknown.' : ''}</Text>
-    </Card>
+      <Text style={{ color: c.mutedForeground, fontSize: 10, marginTop: 4, textAlign: 'center', maxWidth: w }}>Illustrative layout, not a survey.{north == null ? ' North not recorded.' : ''}</Text>
+    </View>
   );
 }
 
 /* ---- workspace ---- */
-type Tab = 'original' | 'edit' | 'view3d';
+type Tab = 'original' | 'edit';
 type Busy = '' | 'analyze' | 'save' | 'confirm' | 'upload' | 'generate';
 export function NativeBlueprint({ projectId, erp }: { projectId: string; erp: ProjectErp }) {
+  // Isolate all editor state and in-flight callbacks when the selected project changes.
+  return <NativeBlueprintWorkspace key={projectId} projectId={projectId} erp={erp} />;
+}
+
+function NativeBlueprintWorkspace({ projectId, erp }: { projectId: string; erp: ProjectErp }) {
   const c = useColors();
   const run = useRun();
   const [state, setState] = useState<BlueprintState | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
-  const [tab, setTab] = useState<Tab | null>(null);
+  const [tab, setTab] = useState<Tab>('edit');
+  // Explicit editor gate: presentation is the default every load; opening/closing only changes the interface.
+  const [editorOpen, setEditorOpen] = useState(false);
+  const projectRef = useRef(projectId); projectRef.current = projectId;
   const [selectedId, setSelectedId] = useState('');
   const [hist, setHist] = useState<History | null>(null);
   const [saved, setSaved] = useState<Geometry | null>(null);
@@ -483,7 +482,6 @@ export function NativeBlueprint({ projectId, erp }: { projectId: string; erp: Pr
   const [conflict, setConflict] = useState(false);
   const [notice, setNotice] = useState('');
   const [ask, setAsk] = useState<null | { title: string; text: string; label: string; go: () => void }>(null);
-  const [presenting, setPresenting] = useState(false);
   const dirty = !!hist && hist.present !== saved;
   const dirtyRef = useRef(false); dirtyRef.current = dirty;
   useEffect(() => {
@@ -507,7 +505,6 @@ export function NativeBlueprint({ projectId, erp }: { projectId: string; erp: Pr
 
   const apply = useCallback((s: BlueprintState, force: boolean) => {
     setState(s);
-    setTab((t) => t ?? (s.canManage ? 'edit' : 'view3d'));
     setSelectedId((cur) => (cur && s.attachments.some((a) => a.id === cur) ? cur : s.sourceAttachmentId || s.confirmedAttachmentId || s.attachments[0]?.id || ''));
     if (force || !dirtyRef.current) {
       const seed = s.draft ?? s.confirmed;
@@ -519,9 +516,10 @@ export function NativeBlueprint({ projectId, erp }: { projectId: string; erp: Pr
   }, []);
   const load = useCallback(async (force: boolean) => {
     setLoading(true); setLoadError('');
-    try { apply(await api.get(projectId), force); } catch (e) { setLoadError(errMessage(e)); } finally { setLoading(false); }
+    try { const s = await api.get(projectId); if (projectRef.current === projectId) apply(s, force); } catch (e) { if (projectRef.current === projectId) setLoadError(errMessage(e)); } finally { if (projectRef.current === projectId) setLoading(false); }
   }, [projectId, apply]);
-  useEffect(() => { void load(true); }, [load]);
+  // Project switch: drop the previous project's state before loading so stale data never shows.
+  useEffect(() => { setState(null); setHist(null); setSaved(null); setEditorOpen(false); setTab('edit'); setNotice(''); setErrors([]); setAsk(null); void load(true); }, [load]);
 
   const act = async (k: Exclude<Busy, ''>, fn: () => Promise<void>) => {
     if (busyRef.current) return;
@@ -553,8 +551,8 @@ export function NativeBlueprint({ projectId, erp }: { projectId: string; erp: Pr
     if (e.length) { setErrors(e); return; }
     void act(confirm ? 'confirm' : 'save', async () => {
       apply(await api.save(projectId, { attachmentId: editSourceId || null, revision: editRevision, geometry: hist.present, confirm, reviewAcknowledged: confirm ? ack : false }), true);
-      setNotice(confirm ? 'Layout confirmed. The 3D presentation now shows this version.' : 'Draft saved. The confirmed presentation is unchanged until you confirm.');
-      if (confirm) setTab('view3d');
+      setNotice(confirm ? 'Layout confirmed.' : 'Draft saved. The confirmed presentation is unchanged until you confirm.');
+      if (confirm) { setEditorOpen(false); setTab('edit'); }
     });
   };
 
@@ -566,17 +564,49 @@ export function NativeBlueprint({ projectId, erp }: { projectId: string; erp: Pr
   if (loadError && !state) return <Banner tone="error" title="Could not load the layout workspace." text={loadError} action={{ label: 'Retry', onPress: () => void load(true) }} />;
   if (!state) return null;
   const canManage = state.canManage;
-  const active: Tab = tab === 'edit' && !canManage ? 'view3d' : tab ?? 'view3d';
+  const hasConfirmed = !!state.confirmed && state.confirmed.plots.length > 0;
+  const vi = { canManage, hasConfirmed, editorOpen };
+  const view = ventureView(vi);
+  const active: Tab = tab;
   const selected = state.attachments.find((a) => a.id === selectedId);
   const stale = dirty && editRevision !== null && state.revision !== editRevision;
   const warnings = (state as BlueprintState & { warnings?: string[] }).warnings ?? [];
-  const tabs: { k: Tab; l: string }[] = [{ k: 'original', l: 'Original plan (optional)' }, ...(canManage ? [{ k: 'edit' as Tab, l: 'Edit layout' }] : []), { k: 'view3d', l: '3D presentation' }];
+  const tabs: { k: Tab; l: string }[] = [{ k: 'original', l: 'Original plan (optional)' }, { k: 'edit', l: 'Edit layout' }];
+  const openEditor = () => { setNotice(''); setErrors([]); setTab('edit'); setEditorOpen(true); };
+  const leaveEditor = () => { setNotice(''); setErrors([]); setEditorOpen(false); setTab('edit'); };
+  const closeEditor = () => {
+    if (closeEditorDecision(dirty) === 'close') { leaveEditor(); return; }
+    setAsk({ title: 'Leave with unsaved edits?', text: 'Cancel to stay and keep editing. Discard returns to the last saved draft; the confirmed layout is unchanged.', label: 'Discard', go: () => { apply(state, true); leaveEditor(); } });
+  };
+  const confirmDialog = ask ? <Confirm title={ask.title} text={ask.text} confirmLabel={ask.label} danger onConfirm={() => { const go = ask.go; setAsk(null); go(); }} onCancel={() => setAsk(null)} /> : null;
 
-  if (presenting && state.confirmed) return <View style={{ marginBottom: 16 }}><View3D geometry={state.confirmed} statusOf={statusOf} presenting onPresent={setPresenting} /></View>;
+  if (view === 'empty-partner') return (
+    <Card>
+      <Text style={{ color: c.foreground, fontFamily: 'Inter_700Bold', fontSize: 16, marginBottom: 4 }}>Venture layout</Text>
+      <Text style={{ color: c.mutedForeground, fontSize: 12 }}>The project team has not published a confirmed layout yet.</Text>
+    </Card>
+  );
+
+  if (view === 'presentation' && state.confirmed) return (
+    <Card>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: c.foreground, fontFamily: 'Inter_700Bold', fontSize: 16 }}>Venture layout</Text>
+          <Text style={{ color: c.mutedForeground, fontSize: 11 }}>{state.confirmed.plots.filter((p) => !p.referenceOnly).length} plots · confirmed</Text>
+        </View>
+      </View>
+      {notice ? <Banner tone="ok" title={notice} /> : null}
+      <View3D key={`3d-${projectId}-${state.revision}`} geometry={state.confirmed} statusOf={statusOf} />
+      {showEditEntry(vi) ? <View style={{ marginTop: 10 }}><Btn label="Edit / recreate layout" icon="edit-2" variant="ghost" onPress={openEditor} /></View> : null}
+    </Card>
+  );
 
   return (
     <View style={{ marginBottom: 16 }}>
-      <Text style={{ color: c.foreground, fontFamily: 'Inter_700Bold', fontSize: 17, marginBottom: 8 }}>Venture layout</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+        <Text style={{ color: c.foreground, fontFamily: 'Inter_700Bold', fontSize: 17, flex: 1 }}>Venture layout</Text>
+        {showEditorReturn(vi) ? <Btn label="Back to layout" icon="arrow-left" variant="ghost" disabled={!!busy} onPress={closeEditor} /> : null}
+      </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8, alignItems: 'center' }}>
         {tabs.map((t) => (
           <Pressable key={t.k} onPress={() => setTab(t.k)} accessibilityRole="tab" accessibilityState={{ selected: active === t.k }} style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, backgroundColor: active === t.k ? c.foreground : c.muted }}>
@@ -601,7 +631,7 @@ export function NativeBlueprint({ projectId, erp }: { projectId: string; erp: Pr
         </View>
       ) : null}
 
-      {active === 'edit' && canManage ? (
+      {active === 'edit' ? (
         <View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
             <Btn label={busy === 'generate' ? 'Generating…' : hist ? 'Regenerate from project data' : 'Generate layout'} icon="layout" disabled={!!busy} onPress={generate} />
@@ -637,10 +667,7 @@ export function NativeBlueprint({ projectId, erp }: { projectId: string; erp: Pr
         </View>
       ) : null}
 
-      {active === 'view3d' ? (state.confirmed && state.confirmed.plots.length ? <View3D key={`3d-${state.revision}`} geometry={state.confirmed} statusOf={statusOf} presenting={false} onPresent={setPresenting} /> : (
-        <Card><Text style={{ color: c.foreground, fontFamily: 'Inter_700Bold', textAlign: 'center' }}>No confirmed layout yet</Text><Text style={{ color: c.mutedForeground, fontSize: 12, textAlign: 'center' }}>{canManage ? 'Generate and arrange the layout, then confirm it to publish the presentation.' : 'The project team has not published a confirmed layout yet.'}</Text></Card>
-      )) : null}
-      {ask ? <Confirm title={ask.title} text={ask.text} confirmLabel={ask.label} danger onConfirm={() => { const go = ask.go; setAsk(null); go(); }} onCancel={() => setAsk(null)} /> : null}
+      {confirmDialog}
     </View>
   );
 }

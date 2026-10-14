@@ -605,18 +605,23 @@ function Settings({ erp, ctx }: { erp: ProjectErp; ctx: ErpCtx }) {
   );
 }
 
+/** Both configured plot routes use the same server-gated presentation and existing inventory. */
+function PlotWorkspace({ erp, ctx }: { erp: ProjectErp; ctx: ErpCtx }) {
+  return <View>{ctx.project ? <NativeBlueprint projectId={ctx.project.id} erp={erp} /> : null}<Plots erp={erp} ctx={ctx} /></View>;
+}
+
 registerBespoke((key, props, erp, ctx) => {
   const kind = str(props.resource);
   switch (key) {
     case 'erp-dashboard': return ctx.account.role === 'PARTNER' ? <PartnerHome erp={erp} ctx={ctx} /> : <AccountantDashboard erp={erp} ctx={ctx} />;
     case 'erp-equity': return <PartnerEquityNative erp={erp} ctx={ctx} />;
-    case 'erp-layout': return <View>{ctx.project ? <NativeBlueprint projectId={ctx.project.id} erp={erp} /> : null}<Plots erp={erp} ctx={ctx} /></View>;
+    case 'erp-layout': return <PlotWorkspace erp={erp} ctx={ctx} />;
     case 'erp-pricing': return <View><PricingEditor erp={erp} ctx={ctx} /><Units erp={erp} ctx={ctx} /></View>;
     case 'erp-statement': return <ProjectStatement erp={erp} ctx={ctx} />;
     case 'erp-settings': return <Settings erp={erp} ctx={ctx} />;
     case 'erp-plan': return <PlanBuilder erp={erp} ctx={ctx} />;
     case 'erp-resource':
-      if (kind === 'plots') return <Plots erp={erp} ctx={ctx} />;
+      if (kind === 'plots') return <PlotWorkspace erp={erp} ctx={ctx} />;
       if (kind === 'units') return <Units erp={erp} ctx={ctx} />;
       if (kind === 'accounts') return <AccountsBar erp={erp} ctx={ctx} full />;
       if (kind === 'investments' || kind === 'expenses' || kind === 'drawings') return <RecordsDesk erp={erp} kind={kind} ctx={ctx} />;
