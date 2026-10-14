@@ -283,7 +283,7 @@ public class ProjectSetupService {
             id,erpSettings.toString());
         cash.ensure(actor,id);
         config.audit(actor,"PROJECT_SETUP_FINALIZED",actor.firmId(),release);
-        return ok(Map.of("id",id,"revision",(Integer)project.get("revision")+1,"setupState","READY","access",credentials,
+        return ok(Map.of("id",id,"revision",jdbc.queryForObject("SELECT revision FROM sos.projects WHERE id=?",Integer.class,id),"setupState","READY","access",credentials,
             "counts",Map.of("partners",setup.path("partners").size(),"accounts",setup.path("accounts").size()+1,"documents",setup.path("documents").size(),"inventory",inventory.size())));
     }
     private void bootstrap(SessionAccount actor,UUID project,String kind,JsonNode data,UUID request,int pos) {

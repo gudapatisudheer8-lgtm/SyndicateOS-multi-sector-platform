@@ -8,6 +8,163 @@
 import * as zod from 'zod';
 
 
+export const GetProjectBlueprintParams = zod.object({
+  "projectId": zod.coerce.string().uuid()
+})
+
+export const GetProjectBlueprintResponse = zod.object({
+  "revision": zod.number().int(),
+  "status": zod.enum(['EMPTY', 'DRAFT', 'CONFIRMED']),
+  "sourceAttachmentId": zod.string().nullish(),
+  "confirmedAttachmentId": zod.string().nullish(),
+  "draft": zod.union([zod.record(zod.string(), zod.unknown()).describe('Versioned normalized 0..100 visual geometry. Parks, optional boundary, dimensional provenance and stable live plot IDs are persisted without changing inventory.'),zod.null()]).optional(),
+  "confirmed": zod.union([zod.record(zod.string(), zod.unknown()).describe('Versioned normalized 0..100 visual geometry. Parks, optional boundary, dimensional provenance and stable live plot IDs are persisted without changing inventory.'),zod.null()]).optional(),
+  "canManage": zod.boolean(),
+  "inventoryFingerprint": zod.string(),
+  "needsReconciliation": zod.boolean(),
+  "warnings": zod.array(zod.string()).optional(),
+  "attachments": zod.array(zod.object({
+  "id": zod.string(),
+  "fileName": zod.string(),
+  "contentType": zod.string()
+}))
+})
+
+
+/**
+ * Save a schematic draft from live inventory and saved setup. No upload or billed AI is required. Existing confirmed geometry is preserved.
+ */
+export const GenerateProjectLayoutParams = zod.object({
+  "projectId": zod.coerce.string().uuid()
+})
+
+export const generateProjectLayoutBodyRevisionMin = 0;
+
+
+
+export const GenerateProjectLayoutBody = zod.object({
+  "revision": zod.number().int().min(generateProjectLayoutBodyRevisionMin)
+})
+
+export const GenerateProjectLayoutResponse = zod.object({
+  "revision": zod.number().int(),
+  "status": zod.enum(['EMPTY', 'DRAFT', 'CONFIRMED']),
+  "sourceAttachmentId": zod.string().nullish(),
+  "confirmedAttachmentId": zod.string().nullish(),
+  "draft": zod.union([zod.record(zod.string(), zod.unknown()).describe('Versioned normalized 0..100 visual geometry. Parks, optional boundary, dimensional provenance and stable live plot IDs are persisted without changing inventory.'),zod.null()]).optional(),
+  "confirmed": zod.union([zod.record(zod.string(), zod.unknown()).describe('Versioned normalized 0..100 visual geometry. Parks, optional boundary, dimensional provenance and stable live plot IDs are persisted without changing inventory.'),zod.null()]).optional(),
+  "canManage": zod.boolean(),
+  "inventoryFingerprint": zod.string(),
+  "needsReconciliation": zod.boolean(),
+  "warnings": zod.array(zod.string()).optional(),
+  "attachments": zod.array(zod.object({
+  "id": zod.string(),
+  "fileName": zod.string(),
+  "contentType": zod.string()
+}))
+})
+
+
+export const SaveProjectBlueprintParams = zod.object({
+  "projectId": zod.coerce.string().uuid()
+})
+
+export const saveProjectBlueprintBodyRevisionMin = 0;
+
+
+
+export const SaveProjectBlueprintBody = zod.object({
+  "revision": zod.number().int().min(saveProjectBlueprintBodyRevisionMin),
+  "attachmentId": zod.string().uuid().nullish(),
+  "geometry": zod.record(zod.string(), zod.unknown()).describe('Versioned normalized 0..100 visual geometry. Parks, optional boundary, dimensional provenance and stable live plot IDs are persisted without changing inventory.'),
+  "confirm": zod.boolean(),
+  "reviewAcknowledged": zod.boolean()
+})
+
+export const SaveProjectBlueprintResponse = zod.object({
+  "revision": zod.number().int(),
+  "status": zod.enum(['EMPTY', 'DRAFT', 'CONFIRMED']),
+  "sourceAttachmentId": zod.string().nullish(),
+  "confirmedAttachmentId": zod.string().nullish(),
+  "draft": zod.union([zod.record(zod.string(), zod.unknown()).describe('Versioned normalized 0..100 visual geometry. Parks, optional boundary, dimensional provenance and stable live plot IDs are persisted without changing inventory.'),zod.null()]).optional(),
+  "confirmed": zod.union([zod.record(zod.string(), zod.unknown()).describe('Versioned normalized 0..100 visual geometry. Parks, optional boundary, dimensional provenance and stable live plot IDs are persisted without changing inventory.'),zod.null()]).optional(),
+  "canManage": zod.boolean(),
+  "inventoryFingerprint": zod.string(),
+  "needsReconciliation": zod.boolean(),
+  "warnings": zod.array(zod.string()).optional(),
+  "attachments": zod.array(zod.object({
+  "id": zod.string(),
+  "fileName": zod.string(),
+  "contentType": zod.string()
+}))
+})
+
+
+export const GetProjectDocumentsParams = zod.object({
+  "projectId": zod.coerce.string().uuid()
+})
+
+export const GetProjectDocumentsResponse = zod.object({
+  "revision": zod.number().int(),
+  "documents": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "category": zod.string(),
+  "attachmentId": zod.string().uuid(),
+  "fileName": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().int()
+})),
+  "canManage": zod.boolean(),
+  "categories": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string()
+}))
+})
+
+
+/**
+ * Atomically synchronize document associations only. Removed records are soft-deleted; private files and financial or historical references are retained.
+ */
+export const SaveProjectDocumentsParams = zod.object({
+  "projectId": zod.coerce.string().uuid()
+})
+
+export const saveProjectDocumentsBodyRevisionMin = 0;
+
+export const saveProjectDocumentsBodyDocumentsMax = 100;
+
+
+
+export const SaveProjectDocumentsBody = zod.object({
+  "revision": zod.number().int().min(saveProjectDocumentsBodyRevisionMin),
+  "documents": zod.array(zod.object({
+  "id": zod.string().uuid().optional(),
+  "title": zod.string(),
+  "category": zod.string(),
+  "attachmentId": zod.string().uuid()
+})).max(saveProjectDocumentsBodyDocumentsMax)
+})
+
+export const SaveProjectDocumentsResponse = zod.object({
+  "revision": zod.number().int(),
+  "documents": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "category": zod.string(),
+  "attachmentId": zod.string().uuid(),
+  "fileName": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().int()
+})),
+  "canManage": zod.boolean(),
+  "categories": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string()
+}))
+})
+
+
 /**
  * Project activity visible only through current active firm/project membership. No approvals are required.
  */

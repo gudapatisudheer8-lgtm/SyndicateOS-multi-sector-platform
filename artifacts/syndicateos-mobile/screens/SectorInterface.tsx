@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { guardLeave } from '@/lib/leaveGuard';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import type {
   ConfigComponent,
@@ -448,7 +449,7 @@ function InterfaceView({ item, projects, role, mode, setupItems = [], allProject
   const hasErp = !!iface?.screens.some((sc) => sc.components.some((x) => ERP_KEYS.includes(x.key as string)));
   const [setupOpen, setSetupOpen] = useState<'new' | 'edit' | null>(null);
   const pool = allProjects ?? projects;
-  const pick = (id: string) => (onPick ? onPick(id) : setSelId(id));
+  const pick = (id: string) => (id === selected?.id ? undefined : guardLeave(() => (onPick ? onPick(id) : setSelId(id))));
   const selected = projects.find((p) => p.id === (selectedId ?? selId)) ?? (hasErp && mode !== 'preview' ? projects.find((p) => setupStateOf(p) !== 'DRAFT') ?? projects[0] ?? null : null);
   const isAcct = role === 'ACCOUNTANT' && mode === 'live';
   const setupDefinition = readSetupConfig(item.configuration);
@@ -477,7 +478,7 @@ function InterfaceView({ item, projects, role, mode, setupItems = [], allProject
   if (!iface || iface.screens.length === 0)
     return <>{frame({ selectors: firmSelector, activeFirmId: mode === 'preview' ? null : item.firmId, content: <Empty icon="layout" title="No screens configured" text={`Release "${item.configuration.label}" defines no ${role.toLowerCase()} interface.`} /> })}</>;
   const screen = screens.find((s) => s.key === screenKey) ?? screens[0] ?? iface.screens[0];
-  const ctx: Ctx = { item, projects, selected, select: setSelId, role, mode };
+  const ctx: Ctx = { item, projects, selected, select: (id: string | null) => ((id ?? null) === (selected?.id ?? null) ? undefined : guardLeave(() => setSelId(id))), role, mode };
   const selectors = (
     <View style={{ gap: 6 }}>
       {firmSelector}
@@ -490,7 +491,7 @@ function InterfaceView({ item, projects, role, mode, setupItems = [], allProject
       {screens.map((s) => {
         const on = s.key === screen.key;
         return (
-          <Pressable key={s.key} onPress={() => setScreenKey(s.key)} accessibilityRole="tab" accessibilityState={{ selected: on }}
+          <Pressable key={s.key} onPress={() => guardLeave(() => setScreenKey(s.key))} accessibilityRole="tab" accessibilityState={{ selected: on }}
             style={{ paddingVertical: 8, paddingHorizontal: 14, borderRadius: 12, backgroundColor: on ? '#111827' : '#e5e7eb' }}>
             <Text style={{ color: on ? '#FFFFFF' : '#1f2937', fontFamily: 'Inter_700Bold', fontSize: 13 }}>{tabLabel(s)}</Text>
           </Pressable>
@@ -552,10 +553,10 @@ export function SectorWorkspace({ ws, account, frame = defaultFrame }: { ws: Wor
   const firmIds = Array.from(new Set(items.map((i) => i.firmId)));
   const firms = firmIds.map((id) => { const f = ws.firms.find((x) => x.id === id); return { id, name: f?.name ?? 'Firm', code: f?.clientCode ?? '' }; });
   const sectorsHere = items.filter((i) => i.firmId === item.firmId);
-  const firmPicker = <FirmPicker firms={firms} value={item.firmId} onChange={(id) => { const first = items.find((i) => i.firmId === id); if (first) { setSel(keyOf(first)); setWant(null); } }} />;
+  const firmPicker = <FirmPicker firms={firms} value={item.firmId} onChange={(id) => { const first = items.find((i) => i.firmId === id); if (first && id !== item.firmId) guardLeave(() => { setSel(keyOf(first)); setWant(null); }); }} />;
   const firmSelector = (
     <View style={{ gap: 6 }}>
-      {sectorsHere.length > 1 ? <Chips options={sectorsHere.map((i) => ({ value: keyOf(i), label: `${i.sectorName}${i.enabled ? '' : ' (read-only)'}` }))} value={keyOf(item)} onChange={(v) => { setSel(v); setWant(null); }} /> : null}
+      {sectorsHere.length > 1 ? <Chips options={sectorsHere.map((i) => ({ value: keyOf(i), label: `${i.sectorName}${i.enabled ? '' : ' (read-only)'}` }))} value={keyOf(item)} onChange={(v) => { if (v !== keyOf(item)) guardLeave(() => { setSel(v); setWant(null); }); }} /> : null}
     </View>
   );
   return (

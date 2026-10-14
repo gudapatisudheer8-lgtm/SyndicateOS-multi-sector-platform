@@ -24,6 +24,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { BlueprintWorkspace } from '../blueprint/BlueprintWorkspace';
+import { confirmLeave } from '../../../adapter/leaveGuard';
 import { MarketingPlotPortalModal } from '../marketing/MarketingPlotPortalModal';
 import { ProjectLayoutDetails, savedProjectText } from './ProjectLayoutDetails';
 
@@ -298,7 +299,7 @@ export const VentureLayoutMasterGrid: React.FC<VentureLayoutMasterGridProps> = (
           <div className="flex items-center bg-gray-100 p-1 rounded-2xl border border-gray-200 text-xs font-bold">
             <button
               type="button"
-              onClick={() => setViewMode('interactive_grid')}
+              onClick={() => { if (viewMode !== 'interactive_grid' && !confirmLeave()) return; setViewMode('interactive_grid'); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
                 viewMode === 'interactive_grid'
                   ? 'bg-slate-900 text-white shadow-xs'

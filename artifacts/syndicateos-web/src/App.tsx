@@ -15,6 +15,7 @@ import { FieldPartnerMobileView } from './original/components/fieldpartner/Field
 import type { IndividualInvestmentData } from './original/components/modals/IndividualInvestmentModal';
 import { Building2, Smartphone } from 'lucide-react';
 import { api, getToken, clearSession, toAppUser, newRequestId, normalizeClientMobile } from './adapter/api';
+import { confirmLeave } from './adapter/leaveGuard';
 import { useConfig, sectorUiCode, masterNumber } from './adapter/config';
 import { MasterEditor } from './adapter/MasterEditor';
 import { loadAll, erpSave, command, pickConfigured, describeAccess, referBackFinancial, resubmitFinancial, type LoadedData } from './adapter/erp';
@@ -138,6 +139,7 @@ function App() {
   };
 
   const handleSignOut = async () => {
+    if (!confirmLeave()) return;
     try { await disablePush(); }
     catch (e: any) { setStickyNotice(`Could not disable this browser's background alerts before sign-out: ${e.message}. Retry sign-out while connected.`); return; }
     try { await api('/auth/logout', { method: 'POST' }); } catch { /* token may already be invalid */ }
@@ -503,8 +505,10 @@ function App() {
   const partnerSession = currentUser.role === 'field_partner' && currentUser.firmId
     ? { firmId: currentUser.firmId, partnerId: currentUser.id } : null;
   const selectedProjectSetup = projectEditContext(data?.workspace, erpOf(activeProjectId), activeProjectId);
+  const selectProjectGuarded = (id: string) => { if (id !== selectedProjectId && !confirmLeave()) return; setSelectedProjectId(id); };
   const selectFirm = (firmId: string) => {
     if (!firms.some((firm) => firm.id === firmId)) return;
+    if (firmId !== selectedFirmId && !confirmLeave()) return;
     setSelectedFirmId(firmId);
     setSelectedProjectId(projects.find((project) => project.firmId === firmId)?.id || '');
   };
@@ -532,7 +536,7 @@ function App() {
       {currentUser && currentRole !== 'super_admin' && data && <RegistrationNotificationLauncher
         identityKey={`${currentUser.id}:${currentUser.role}:${currentUser.firmId}`}
         firm={data.firms.find((firm) => firm.id === selectedFirmId)} projects={data.projects} plots={data.plots}
-        accounts={data.accounts} onSelectProject={setSelectedProjectId} onUpdatePlot={handleUpdatePlot}
+        accounts={data.accounts} onSelectProject={selectProjectGuarded} onUpdatePlot={handleUpdatePlot}
       />}
       {(loadError || stickyNotice) && (
         <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 pt-4 space-y-2">
@@ -586,7 +590,7 @@ function App() {
             onSelectFirm={selectFirm}
             projects={projects.filter((p) => p.firmId === currentFirm.id)}
             selectedProjectId={activeProjectId}
-            onSelectProject={setSelectedProjectId}
+            onSelectProject={selectProjectGuarded}
             onAddProject={handleAddProject}
             projectSetupDefinition={selectedProjectSetup?.definition}
             projectSetupValues={selectedProjectSetup?.values}
@@ -599,6 +603,7 @@ function App() {
                     .map((r: any) => ({ recordId: r.id, revision: r.revision })) } as Project
               : undefined}
             onUploadProjectDocuments={handleUploadProjectDocuments}
+            onProjectDocumentsChanged={() => { if (currentUser) void reload(currentUser.role); }}
             projectPlotResource={(erpOf(activeProjectId)?.resources || []).find((resource: any) => resource.kind === 'plots')}
             projectPlotRecords={(erpOf(activeProjectId)?.records || []).filter((record: any) => record.kind === 'plots')}
             plots={data.plots}
@@ -650,6 +655,7 @@ function App() {
             firms={firms}
             currentUser={currentUser}
             onSelectFirm={(firmId) => {
+              if (firmId !== selectedFirmId && !confirmLeave()) return;
               setSelectedFirmId(firmId);
               setSelectedProjectId(projects.find((p) => p.firmId === firmId)?.id || '');
             }}
@@ -667,7 +673,7 @@ function App() {
             onUpdatePlot={handleUpdatePlot}
             projects={projects}
             selectedProjectId={activeProjectId}
-            onSelectProject={setSelectedProjectId}
+            onSelectProject={selectProjectGuarded}
             layoutCalc={data.settings.layoutCalc ?? EMPTY_LAYOUT}
             onUpdateLayoutCalc={handleUpdateLayoutCalc}
             projectExpenses={data.projectExpenses}

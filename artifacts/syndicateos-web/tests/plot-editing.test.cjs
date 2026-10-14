@@ -19,6 +19,7 @@ function loadEditor() {
     new Function('require', 'module', 'exports', compiled)((dependency) => {
       if (dependency === './ProjectPlotEditor' || dependency === './EditProjectModal') return load(dependency.slice(2));
       if (dependency === './PlanDocumentUploader') return { PlanDocumentUploader: () => null };
+      if (dependency === './ProjectDocumentsManager') return { ProjectDocumentsManager: () => null };
       if (dependency === '../../../adapter/api') return { downloadProjectAttachment: async () => {} };
       return require(dependency);
     }, module, module.exports);

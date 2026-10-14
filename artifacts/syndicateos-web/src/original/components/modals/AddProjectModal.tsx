@@ -1,6 +1,6 @@
 import { MasterOptions, masterNumber, masterItem } from '../../../adapter/config';
-import React, { useState } from 'react';
-import { downloadProjectAttachment } from '../../../adapter/api';
+import React, { useCallback, useRef, useState } from 'react';
+import { ProjectDocumentsManager } from './ProjectDocumentsManager';
 import {
   TenantFirm,
   Project,
@@ -49,7 +49,6 @@ import {
   Upload,
   Dumbbell,
   PieChart,
-  Download,
   Pencil,
   Lock
 } from 'lucide-react';
@@ -72,6 +71,8 @@ interface AddProjectModalProps {
   initialProject?: Project;
   /** Edit mode: uploads NEW documents privately to the saved project. */
   onUploadDocuments?: (projectId: string, documents: PlanUploadDocument[]) => Promise<boolean>;
+  /** Edit mode: ask the app to refresh its workspace after documents are saved. */
+  onDocumentsChanged?: () => void;
 }
 
 const AVATAR_COLORS = [
@@ -224,6 +225,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
   onAddFirmAccount,
   initialProject,
   onUploadDocuments,
+  onDocumentsChanged,
 }) => {
   const [ip] = useState(() => initialProject ? structuredClone(initialProject) : undefined);
   const isEdit = !!ip;
@@ -248,8 +250,13 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
   const [newDocs, setNewDocs] = useState<PlanUploadDocument[]>([]);
   const [docUploading, setDocUploading] = useState(false);
   const [docMsg, setDocMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [downloadingDoc, setDownloadingDoc] = useState('');
-  const [downloadError, setDownloadError] = useState('');
+  const docRevisionRef = useRef<number>(Number((initialProject as any)?.__revision ?? 0));
+  const [docsDirty, setDocsDirty] = useState(false);
+  const [docsReload, setDocsReload] = useState(0);
+  const docsSaveRef = useRef<null | (() => Promise<boolean>)>(null);
+  const docsChangedRef = useRef(onDocumentsChanged); docsChangedRef.current = onDocumentsChanged;
+  const onDocRevision = useCallback((r: number) => { const grew = r > docRevisionRef.current; docRevisionRef.current = r; if (grew) docsChangedRef.current?.(); }, []);
+  const requestClose = () => { if (docsDirty && !window.confirm('Discard unsaved document changes?')) return; onClose(); };
   const [selectedFirmAccountId, setSelectedFirmAccountId] = useState<string>(() => {
     const primary = availableFirmAccounts.find((a) => a.isPrimary);
     return primary ? primary.id : availableFirmAccounts[0]?.id || '';
@@ -696,6 +703,11 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
       }
       setSubmitting(true);
       try {
+        if (docsSaveRef.current && !(await docsSaveRef.current())) {
+          setError('Document changes could not be saved, so project details were not saved either. Fix the documents section and try again.');
+          return;
+        }
+        (draft as any).__revision = Math.max(Number((draft as any).__revision ?? 0), docRevisionRef.current);
         const ok = await onAddProject(draft, undefined, undefined, pendingAccounts);
         if (ok === false) setError('Changes were not saved. Review the highlighted values; plot counts cannot drop below booked or sold plots.');
         else onClose();
@@ -975,7 +987,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             disabled={submitting || docUploading}
             className="p-2 text-gray-400 hover:text-gray-950 hover:bg-gray-100 rounded-full transition-colors shrink-0 disabled:opacity-40"
             title="Close"
@@ -1781,7 +1793,8 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
             )}
 
             {/* SECTION 4: BLUEPRINT & PLAN UPLOAD */}
-            {(activeFormTab === 'all' || activeFormTab === 'blueprint_upload') && (
+            {/* Always mounted so unsaved document edits survive form-tab switches. */}
+            <div className={activeFormTab === 'all' || activeFormTab === 'blueprint_upload' ? 'contents' : 'hidden'}>
               <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-xs space-y-4">
                 <div className="flex items-center gap-2 text-xs font-black uppercase text-gray-900 tracking-wider">
                   <Upload className="w-4 h-4 text-amber-600" />
@@ -1792,24 +1805,8 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <p className="text-[11px] font-black uppercase tracking-wider text-gray-600">Saved documents</p>
-                      {(ip?.planDocuments || []).length === 0 ? (
-                        <p className="rounded-xl border border-dashed border-gray-300 p-3 text-center text-[11px] text-gray-500">No documents saved for this project yet.</p>
-                      ) : (ip?.planDocuments || []).map((doc) => (
-                        <div key={doc.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 px-3 py-2">
-                          <div className="min-w-0"><p className="truncate text-xs font-bold text-gray-900">{doc.title}</p><p className="truncate text-[11px] text-gray-500">{doc.fileName}</p></div>
-                          <button type="button" data-testid={`button-download-doc-${doc.id}`} disabled={!!downloadingDoc}
-                            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
-                            onClick={async () => {
-                              setDownloadError(''); setDownloadingDoc(doc.id);
-                              try { await downloadProjectAttachment(projectId, doc.id); }
-                              catch (err) { setDownloadError(err instanceof Error ? err.message : 'Download failed. Please try again.'); }
-                              finally { setDownloadingDoc(''); }
-                            }}>
-                            <Download className="w-3.5 h-3.5" /><span className="hidden sm:inline">{downloadingDoc === doc.id ? 'Downloading…' : 'Download'}</span>
-                          </button>
-                        </div>
-                      ))}
-                      {downloadError && <p role="alert" className="text-xs font-semibold text-red-700">{downloadError}</p>}
+                      <ProjectDocumentsManager projectId={projectId} revisionRef={docRevisionRef} onRevision={onDocRevision} onDirty={setDocsDirty}
+                        saveRef={docsSaveRef} reloadKey={docsReload} disabled={submitting || docUploading} />
                     </div>
                     <div className="space-y-2 border-t border-gray-100 pt-3">
                       <p className="text-[11px] font-black uppercase tracking-wider text-gray-600">Add new documents</p>
@@ -1823,8 +1820,9 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                             if (docUploading || !onUploadDocuments || newDocs.length === 0) return;
                             setDocMsg(null); setDocUploading(true);
                             try {
+                              if (docsSaveRef.current && !(await docsSaveRef.current())) { setDocMsg({ ok: false, text: 'Save or discard your document edits first; the upload was not started.' }); return; }
                               const ok = await onUploadDocuments(projectId, newDocs);
-                              if (ok) { setDocMsg({ ok: true, text: `${newDocs.length} document${newDocs.length > 1 ? 's' : ''} uploaded privately.` }); setNewDocs([]); }
+                              if (ok) { setDocMsg({ ok: true, text: `${newDocs.length} document${newDocs.length > 1 ? 's' : ''} uploaded privately.` }); setNewDocs([]); setDocsReload((n) => n + 1); }
                               else setDocMsg({ ok: false, text: 'Upload failed. Your selected files are kept; try again.' });
                             } catch (err) {
                               setDocMsg({ ok: false, text: err instanceof Error ? err.message : 'Upload failed.' });
@@ -1845,7 +1843,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
                   />
                 )}
               </div>
-            )}
+            </div>
 
             {/* SECTION 5: PROJECT SYNDICATE PARTNERS & DYNAMIC EQUITY ALLOCATION */}
             {(activeFormTab === 'all' || activeFormTab === 'partners') && (
@@ -2297,7 +2295,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
             <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={requestClose}
                 disabled={submitting || docUploading}
                 className="px-5 py-2.5 rounded-xl text-xs font-bold text-gray-600 hover:text-gray-950 hover:bg-gray-200/70 transition-colors disabled:opacity-50"
               >

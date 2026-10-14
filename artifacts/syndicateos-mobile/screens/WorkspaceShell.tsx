@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { guardLeave } from '@/lib/leaveGuard';
 import React, { useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,7 +50,7 @@ export function WorkspaceShell({ mode, bell }: { mode: 'owner' | 'client'; bell?
       {tabs.map((t) => {
         const on = t.key === tab;
         return (
-          <Pressable key={t.key} onPress={() => setTab(t.key)} accessibilityRole="tab" accessibilityState={{ selected: on }}
+          <Pressable key={t.key} onPress={() => (t.key === tab ? undefined : guardLeave(() => setTab(t.key)))} accessibilityRole="tab" accessibilityState={{ selected: on }}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 12, backgroundColor: on ? 'rgba(255,255,255,0.14)' : 'transparent' }}>
             <Feather name={t.icon} size={16} color={c.heroForeground} />
             <Text style={{ color: c.heroForeground, fontFamily: 'Inter_600SemiBold' }}>{t.label}</Text>
@@ -91,7 +92,7 @@ export function WorkspaceShell({ mode, bell }: { mode: 'owner' | 'client'; bell?
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {account?.role === 'PARTNER' ? <CompactLang /> : null}
               {bell ?? <NativeNotificationBell />}
-              <ProfileMenu name={account?.displayName ?? ''} role={account?.role === 'PARTNER' ? 'Partner' : 'Accountant'} firm={af ? `${af.name} (${af.clientCode})` : ''} onSignOut={() => void signOut()} />
+              <ProfileMenu name={account?.displayName ?? ''} role={account?.role === 'PARTNER' ? 'Partner' : 'Accountant'} firm={af ? `${af.name} (${af.clientCode})` : ''} onSignOut={() => guardLeave(() => void signOut())} />
             </View>
           </View>
           {selectors}
@@ -112,13 +113,13 @@ export function WorkspaceShell({ mode, bell }: { mode: 'owner' | 'client'; bell?
       {wide ? (
         <View style={{ width: 240, backgroundColor: c.hero, padding: 20, justifyContent: 'space-between' }}>
           <View>{head}{nav}</View>
-          <Btn label="Sign out" variant="ghost" icon="log-out" onPress={() => void signOut()} />
+          <Btn label="Sign out" variant="ghost" icon="log-out" onPress={() => guardLeave(() => void signOut())} />
         </View>
       ) : (
         <View style={{ backgroundColor: c.hero, paddingTop: Platform.OS === 'web' ? 24 : insets.top + 8, paddingHorizontal: 16, paddingBottom: 12, gap: 12 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             {head}
-            <Pressable onPress={() => void signOut()} accessibilityRole="button" accessibilityLabel="Sign out" hitSlop={10}>
+            <Pressable onPress={() => guardLeave(() => void signOut())} accessibilityRole="button" accessibilityLabel="Sign out" hitSlop={10}>
               <Feather name="log-out" size={20} color={c.heroForeground} />
             </Pressable>
           </View>

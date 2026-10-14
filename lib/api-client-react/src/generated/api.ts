@@ -26,13 +26,18 @@ import type {
   CompanyLookupInput,
   CompanyLookupResult,
   CredentialInput,
+  GenerateLayoutRequest,
   GetBusinessMasters200,
   GetProjectNotifications200,
   HealthStatus,
   LoginInput,
   LoginResult,
+  ProjectBlueprint,
+  ProjectDocuments,
   ProjectErp,
   ReadinessStatus,
+  SaveBlueprintRequest,
+  SaveDocumentsRequest,
   SectorConfiguration,
   SessionAccount,
   UploadProjectAttachment200,
@@ -66,6 +71,403 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetProjectBlueprintUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/erp/${projectId}/blueprint`
+}
+
+export const getProjectBlueprint = async (projectId: string, options?: Parameters<typeof customFetch>[1]): Promise<ProjectBlueprint> => {
+
+  return customFetch<ProjectBlueprint>(getGetProjectBlueprintUrl(projectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetProjectBlueprintQueryKey = (projectId: string,) => {
+    return [
+    `/api/erp/${projectId}/blueprint`
+    ] as const;
+    }
+
+
+export const getGetProjectBlueprintQueryOptions = <TData = Awaited<ReturnType<typeof getProjectBlueprint>>, TError = ErrorType<ApiFailureResponse>>(projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProjectBlueprint>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProjectBlueprintQueryKey(projectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectBlueprint>>> = ({ signal }) => getProjectBlueprint(projectId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProjectBlueprint>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetProjectBlueprintQueryResult = NonNullable<Awaited<ReturnType<typeof getProjectBlueprint>>>
+export type GetProjectBlueprintQueryError = ErrorType<ApiFailureResponse>
+
+
+
+export function useGetProjectBlueprint<TData = Awaited<ReturnType<typeof getProjectBlueprint>>, TError = ErrorType<ApiFailureResponse>>(
+ projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProjectBlueprint>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetProjectBlueprintQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGenerateProjectLayoutUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/erp/${projectId}/blueprint/generate`
+}
+
+/**
+ * Save a schematic draft from live inventory and saved setup. No upload or billed AI is required. Existing confirmed geometry is preserved.
+ */
+export const generateProjectLayout = async (projectId: string,
+    generateLayoutRequest: GenerateLayoutRequest, options?: Parameters<typeof customFetch>[1]): Promise<ProjectBlueprint> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ProjectBlueprint>(getGenerateProjectLayoutUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(generateLayoutRequest)
+  }
+);}
+
+
+
+
+
+export const getGenerateProjectLayoutMutationKey = () => ['generateProjectLayout'] as const;
+
+export const getGenerateProjectLayoutMutationOptions = <TError = ErrorType<ApiFailureResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateProjectLayout>>, TError,GenerateProjectLayoutMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateProjectLayout>>, TError,GenerateProjectLayoutMutationVariables, TContext> => {
+
+const mutationKey = getGenerateProjectLayoutMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateProjectLayout>>, GenerateProjectLayoutMutationVariables> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  generateProjectLayout(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateProjectLayoutMutationResult = NonNullable<Awaited<ReturnType<typeof generateProjectLayout>>>
+    export type GenerateProjectLayoutMutationBody = BodyType<GenerateLayoutRequest>
+    export type GenerateProjectLayoutMutationError = ErrorType<ApiFailureResponse>
+    export type GenerateProjectLayoutMutationVariables = {projectId: string;data: BodyType<GenerateLayoutRequest>}
+
+    export const useGenerateProjectLayout = <TError = ErrorType<ApiFailureResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateProjectLayout>>, TError,GenerateProjectLayoutMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateProjectLayout>>,
+        TError,
+        GenerateProjectLayoutMutationVariables,
+        TContext
+      > => {
+      return useMutation(getGenerateProjectLayoutMutationOptions(options));
+    }
+
+export const getSaveProjectBlueprintUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/erp/${projectId}/blueprint/save`
+}
+
+export const saveProjectBlueprint = async (projectId: string,
+    saveBlueprintRequest: SaveBlueprintRequest, options?: Parameters<typeof customFetch>[1]): Promise<ProjectBlueprint> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ProjectBlueprint>(getSaveProjectBlueprintUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(saveBlueprintRequest)
+  }
+);}
+
+
+
+
+
+export const getSaveProjectBlueprintMutationKey = () => ['saveProjectBlueprint'] as const;
+
+export const getSaveProjectBlueprintMutationOptions = <TError = ErrorType<ApiFailureResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveProjectBlueprint>>, TError,SaveProjectBlueprintMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveProjectBlueprint>>, TError,SaveProjectBlueprintMutationVariables, TContext> => {
+
+const mutationKey = getSaveProjectBlueprintMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveProjectBlueprint>>, SaveProjectBlueprintMutationVariables> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  saveProjectBlueprint(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveProjectBlueprintMutationResult = NonNullable<Awaited<ReturnType<typeof saveProjectBlueprint>>>
+    export type SaveProjectBlueprintMutationBody = BodyType<SaveBlueprintRequest>
+    export type SaveProjectBlueprintMutationError = ErrorType<ApiFailureResponse>
+    export type SaveProjectBlueprintMutationVariables = {projectId: string;data: BodyType<SaveBlueprintRequest>}
+
+    export const useSaveProjectBlueprint = <TError = ErrorType<ApiFailureResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveProjectBlueprint>>, TError,SaveProjectBlueprintMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveProjectBlueprint>>,
+        TError,
+        SaveProjectBlueprintMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveProjectBlueprintMutationOptions(options));
+    }
+
+export const getGetProjectDocumentsUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/erp/${projectId}/documents`
+}
+
+export const getProjectDocuments = async (projectId: string, options?: Parameters<typeof customFetch>[1]): Promise<ProjectDocuments> => {
+
+  return customFetch<ProjectDocuments>(getGetProjectDocumentsUrl(projectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetProjectDocumentsQueryKey = (projectId: string,) => {
+    return [
+    `/api/erp/${projectId}/documents`
+    ] as const;
+    }
+
+
+export const getGetProjectDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof getProjectDocuments>>, TError = ErrorType<ApiFailureResponse>>(projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProjectDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProjectDocumentsQueryKey(projectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectDocuments>>> = ({ signal }) => getProjectDocuments(projectId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProjectDocuments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetProjectDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof getProjectDocuments>>>
+export type GetProjectDocumentsQueryError = ErrorType<ApiFailureResponse>
+
+
+
+export function useGetProjectDocuments<TData = Awaited<ReturnType<typeof getProjectDocuments>>, TError = ErrorType<ApiFailureResponse>>(
+ projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProjectDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetProjectDocumentsQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveProjectDocumentsUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/erp/${projectId}/documents`
+}
+
+/**
+ * Atomically synchronize document associations only. Removed records are soft-deleted; private files and financial or historical references are retained.
+ */
+export const saveProjectDocuments = async (projectId: string,
+    saveDocumentsRequest: SaveDocumentsRequest, options?: Parameters<typeof customFetch>[1]): Promise<ProjectDocuments> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ProjectDocuments>(getSaveProjectDocumentsUrl(projectId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(saveDocumentsRequest)
+  }
+);}
+
+
+
+
+
+export const getSaveProjectDocumentsMutationKey = () => ['saveProjectDocuments'] as const;
+
+export const getSaveProjectDocumentsMutationOptions = <TError = ErrorType<ApiFailureResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveProjectDocuments>>, TError,SaveProjectDocumentsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveProjectDocuments>>, TError,SaveProjectDocumentsMutationVariables, TContext> => {
+
+const mutationKey = getSaveProjectDocumentsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveProjectDocuments>>, SaveProjectDocumentsMutationVariables> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  saveProjectDocuments(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveProjectDocumentsMutationResult = NonNullable<Awaited<ReturnType<typeof saveProjectDocuments>>>
+    export type SaveProjectDocumentsMutationBody = BodyType<SaveDocumentsRequest>
+    export type SaveProjectDocumentsMutationError = ErrorType<ApiFailureResponse>
+    export type SaveProjectDocumentsMutationVariables = {projectId: string;data: BodyType<SaveDocumentsRequest>}
+
+    export const useSaveProjectDocuments = <TError = ErrorType<ApiFailureResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveProjectDocuments>>, TError,SaveProjectDocumentsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveProjectDocuments>>,
+        TError,
+        SaveProjectDocumentsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveProjectDocumentsMutationOptions(options));
+    }
 
 export const getGetProjectNotificationsUrl = () => {
 

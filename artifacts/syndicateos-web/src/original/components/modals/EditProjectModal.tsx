@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Download, FileText, Info, Plus, Save, Trash2, Upload, X } from 'lucide-react';
-import { downloadProjectAttachment } from '../../../adapter/api';
+import { useRef, useState } from 'react';
+import { FileText, Info, Plus, Save, Trash2, Upload, X } from 'lucide-react';
+import { ProjectDocumentsManager } from './ProjectDocumentsManager';
 import type { PlanUploadDocument, Project } from '../../types';
 import { PlanDocumentUploader } from './PlanDocumentUploader';
 import { ProjectPlotEditor, buildPlotEdits, plotEditErrors, type PlotRecord } from './ProjectPlotEditor';
@@ -174,7 +174,10 @@ export function EditProjectModal({ project, definition, initialValues, initialSe
 
   const [values, setValues] = useState<Row>(() => clone(initialValues || {}));
   const [settings, setSettings] = useState<Row>(() => clone(initialSettings || {}));
-  const [revision] = useState<number>(() => Number((project as any).__revision ?? 0));
+  const revisionRef = useRef<number>(Number((project as any).__revision ?? 0));
+  const [docsDirty, setDocsDirty] = useState(false);
+  const [docsReload, setDocsReload] = useState(0);
+  const docsSaveRef = useRef<null | (() => Promise<boolean>)>(null);
   const [plotSnapshot] = useState<PlotRecord[]>(() => (Array.isArray(plotRecords) ? clone(plotRecords) : []));
   const [plotDrafts, setPlotDrafts] = useState<Record<string, Row>>({});
   const [plotFields] = useState<FieldDef[]>(() => clone(asFields(plotResource?.fields)));
@@ -184,9 +187,6 @@ export function EditProjectModal({ project, definition, initialValues, initialSe
   const [newDocs, setNewDocs] = useState<PlanUploadDocument[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [downloading, setDownloading] = useState('');
-  const [downloadError, setDownloadError] = useState('');
-  const savedDocs = project.planDocuments || [];
   const busy = saving || uploading;
 
   const errors = [...collectErrors(allValueFields, values), ...collectErrors(settingsFields, settings), ...plotEditErrors(plotFields, plotSnapshot, plotDrafts)];
@@ -198,7 +198,8 @@ export function EditProjectModal({ project, definition, initialValues, initialSe
     if (errors.length) { setSaveError(errors[0]); return; }
     setSaving(true);
     try {
-      const ok = await onSave(projectId, normalize(allValueFields, values), normalize(settingsFields, settings), revision, buildPlotEdits(plotFields, plotSnapshot, plotDrafts));
+      if (docsSaveRef.current && !(await docsSaveRef.current())) { setSaveError('Document changes could not be saved, so details were not saved either. Fix the documents section and retry.'); return; }
+      const ok = await onSave(projectId, normalize(allValueFields, values), normalize(settingsFields, settings), revisionRef.current, buildPlotEdits(plotFields, plotSnapshot, plotDrafts));
       if (ok) onClose();
       else setSaveError('Project details were not saved. Another editor may have changed this project, or a field was rejected. Close and reopen to load the latest version, then try again.');
     } catch (e) {
@@ -212,8 +213,9 @@ export function EditProjectModal({ project, definition, initialValues, initialSe
     if (busy || !onUploadDocuments || newDocs.length === 0) return;
     setUploadMsg(null); setUploading(true);
     try {
+      if (docsSaveRef.current && !(await docsSaveRef.current())) { setUploadMsg({ ok: false, text: 'Save or discard your document edits first; the upload was not started.' }); return; }
       const ok = await onUploadDocuments(projectId, newDocs);
-      if (ok) { setUploadMsg({ ok: true, text: `${newDocs.length} document${newDocs.length > 1 ? 's' : ''} uploaded privately to ${project.name}.` }); setNewDocs([]); }
+      if (ok) { setUploadMsg({ ok: true, text: `${newDocs.length} document${newDocs.length > 1 ? 's' : ''} uploaded privately to ${project.name}.` }); setNewDocs([]); setDocsReload((n) => n + 1); }
       else setUploadMsg({ ok: false, text: 'Upload failed. Your selected files are kept; try again.' });
     } catch (e) {
       setUploadMsg({ ok: false, text: e instanceof Error ? e.message : 'Upload failed.' });
@@ -222,7 +224,7 @@ export function EditProjectModal({ project, definition, initialValues, initialSe
     }
   };
 
-  const requestClose = () => { if (!busy) onClose(); };
+  const requestClose = () => { if (busy) return; if (docsDirty && !window.confirm('Discard unsaved document changes?')) return; onClose(); };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-gray-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="edit-project-title">
@@ -285,24 +287,8 @@ export function EditProjectModal({ project, definition, initialValues, initialSe
           <section className="space-y-3 rounded-2xl border border-gray-200 p-4">
             <h3 className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-gray-800"><FileText className="h-4 w-4 text-amber-600" /> Plans &amp; documents</h3>
             <p className="text-[11px] text-gray-500">Private files saved to {project.name}.</p>
-            {savedDocs.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-gray-300 p-3 text-center text-[11px] text-gray-500">No documents saved for this project yet.</p>
-            ) : savedDocs.map((doc) => (
-              <div key={doc.id} className="flex items-center justify-between gap-3 border-t border-gray-100 pt-3">
-                <div className="min-w-0"><p className="truncate text-sm font-semibold">{doc.title}</p><p className="truncate text-xs text-gray-500">{doc.fileName}</p></div>
-                <button type="button" data-testid={`button-download-doc-${doc.id}`} disabled={!!downloading}
-                  className="flex shrink-0 items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold disabled:opacity-50"
-                  onClick={async () => {
-                    setDownloadError(''); setDownloading(doc.id);
-                    try { await downloadProjectAttachment(projectId, doc.id); }
-                    catch (e) { setDownloadError(e instanceof Error ? e.message : 'Download failed. Please try again.'); }
-                    finally { setDownloading(''); }
-                  }}>
-                  <Download size={14} /><span className="hidden sm:inline">{downloading === doc.id ? 'Downloading…' : 'Download'}</span>
-                </button>
-              </div>
-            ))}
-            {downloadError && <p role="alert" className="text-xs font-semibold text-red-700">{downloadError}</p>}
+            <ProjectDocumentsManager projectId={projectId} revisionRef={revisionRef} onRevision={(r) => { revisionRef.current = r; }} onDirty={setDocsDirty}
+              saveRef={docsSaveRef} reloadKey={docsReload} disabled={busy} />
 
             <div className="border-t border-gray-100 pt-3">
               <p className="mb-2 text-[11px] font-black uppercase tracking-wider text-gray-600">Add new documents</p>

@@ -11,6 +11,87 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /erp/{projectId}/blueprint:
+    get:
+      operationId: getProjectBlueprint
+      tags: [workspace]
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Authorized layout; partners receive confirmed geometry only
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProjectBlueprint" }
+        default: { $ref: "#/components/responses/ApiFailure" }
+  /erp/{projectId}/blueprint/generate:
+    post:
+      operationId: generateProjectLayout
+      tags: [workspace]
+      description: Save a schematic draft from live inventory and saved setup. No upload or billed AI is required. Existing confirmed geometry is preserved.
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GenerateLayoutRequest" }
+      responses:
+        "200":
+          description: Saved project-generated draft
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProjectBlueprint" }
+        default: { $ref: "#/components/responses/ApiFailure" }
+  /erp/{projectId}/blueprint/save:
+    post:
+      operationId: saveProjectBlueprint
+      tags: [workspace]
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveBlueprintRequest" }
+      responses:
+        "200":
+          description: Saved draft or reviewed presentation version
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProjectBlueprint" }
+        default: { $ref: "#/components/responses/ApiFailure" }
+  /erp/{projectId}/documents:
+    get:
+      operationId: getProjectDocuments
+      tags: [workspace]
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Active project documents, excluding unrelated payment attachments
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProjectDocuments" }
+        default: { $ref: "#/components/responses/ApiFailure" }
+    post:
+      operationId: saveProjectDocuments
+      tags: [workspace]
+      description: Atomically synchronize document associations only. Removed records are soft-deleted; private files and financial or historical references are retained.
+      parameters:
+        - { name: projectId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveDocumentsRequest" }
+      responses:
+        "200":
+          description: Current documents and project revision
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProjectDocuments" }
+        default: { $ref: "#/components/responses/ApiFailure" }
   /notifications:
     get:
       operationId: getProjectNotifications
@@ -281,6 +362,89 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ApiError" }
   schemas:
+    GenerateLayoutRequest:
+      type: object
+      required: [revision]
+      properties:
+        revision: { type: integer, minimum: 0 }
+    SaveBlueprintRequest:
+      type: object
+      required: [revision, geometry, confirm, reviewAcknowledged]
+      properties:
+        revision: { type: integer, minimum: 0 }
+        attachmentId: { type: [string, "null"], format: uuid }
+        geometry: { $ref: "#/components/schemas/LayoutGeometry" }
+        confirm: { type: boolean }
+        reviewAcknowledged: { type: boolean }
+    SaveDocumentsRequest:
+      type: object
+      required: [revision, documents]
+      properties:
+        revision: { type: integer, minimum: 0 }
+        documents:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [title, category, attachmentId]
+            properties:
+              id: { type: string, format: uuid }
+              title: { type: string }
+              category: { type: string }
+              attachmentId: { type: string, format: uuid }
+    LayoutGeometry:
+      type: object
+      description: Versioned normalized 0..100 visual geometry. Parks, optional boundary, dimensional provenance and stable live plot IDs are persisted without changing inventory.
+      additionalProperties: true
+    ProjectBlueprint:
+      type: object
+      required: [revision, status, canManage, attachments, needsReconciliation, inventoryFingerprint]
+      properties:
+        revision: { type: integer }
+        status: { type: string, enum: [EMPTY, DRAFT, CONFIRMED] }
+        sourceAttachmentId: { type: [string, "null"] }
+        confirmedAttachmentId: { type: [string, "null"] }
+        draft: { oneOf: [ { $ref: "#/components/schemas/LayoutGeometry" }, { type: "null" } ] }
+        confirmed: { oneOf: [ { $ref: "#/components/schemas/LayoutGeometry" }, { type: "null" } ] }
+        canManage: { type: boolean }
+        inventoryFingerprint: { type: string }
+        needsReconciliation: { type: boolean }
+        warnings: { type: array, items: { type: string } }
+        attachments:
+          type: array
+          items:
+            type: object
+            required: [id, fileName, contentType]
+            properties:
+              id: { type: string }
+              fileName: { type: string }
+              contentType: { type: string }
+    ProjectDocument:
+      type: object
+      required: [id, title, category, attachmentId, fileName, contentType, size]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        category: { type: string }
+        attachmentId: { type: string, format: uuid }
+        fileName: { type: string }
+        contentType: { type: string }
+        size: { type: integer }
+    ProjectDocuments:
+      type: object
+      required: [revision, documents, canManage, categories]
+      properties:
+        revision: { type: integer }
+        documents: { type: array, items: { $ref: "#/components/schemas/ProjectDocument" } }
+        canManage: { type: boolean }
+        categories:
+          type: array
+          items:
+            type: object
+            required: [value, label]
+            properties:
+              value: { type: string }
+              label: { type: string }
     ErpRecord:
       type: object
       required: [id, kind, revision, status, createdBy, createdAt, data]

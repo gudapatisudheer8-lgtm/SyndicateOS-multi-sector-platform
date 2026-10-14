@@ -10,8 +10,12 @@ export const analyzeBlueprint = (projectId: string, attachmentId: string, revisi
 
 export const saveBlueprint = (
   projectId: string,
-  body: { attachmentId: string; revision: number; geometry: Geometry; confirm: boolean; reviewAcknowledged: boolean },
+  body: { attachmentId: string | null; revision: number; geometry: Geometry; confirm: boolean; reviewAcknowledged: boolean },
 ) => adapter.api<BlueprintState>(`${base(projectId)}/save`, { method: 'POST', body });
+
+/** Deterministic, non-AI starter layout from live project inventory; saved as a new draft. */
+export const generateLayout = (projectId: string, revision: number) =>
+  adapter.api<BlueprintState>(`${base(projectId)}/generate`, { method: 'POST', body: { revision } });
 
 /** Original attachment bytes, fetched privately with the bearer session (never a public URL). */
 export const fetchAttachmentBlob = (projectId: string, attachmentId: string): Promise<Blob> =>

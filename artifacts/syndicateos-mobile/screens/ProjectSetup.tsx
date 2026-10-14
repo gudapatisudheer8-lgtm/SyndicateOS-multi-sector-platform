@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import type { Project, WorkspaceInterfacesItem } from '@workspace/api-client-react';
+import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { getProjectDocuments, saveProjectDocuments, type Project, type ProjectDocument, type WorkspaceInterfacesItem } from '@workspace/api-client-react';
 import { Badge, Banner, Btn, Card, Chips, Confirm, CredentialSheet, Empty, Field, Label, Sheet } from '@/components/ui';
 import { AccountCards, FacingMatrix, PartnerCards, inr, optLabel } from '@/components/SetupSimple';
 import { useColors } from '@/hooks/useColors';
-import { attachmentsSupported, pickFile, uploadAttachment, validateFile } from '@/lib/attachments';
+import { attachmentsSupported, fetchAttachmentBlob, pickFile, saveBlob, uploadAttachment, validateFile } from '@/lib/attachments';
 import { newRequestId, useErp } from '@/lib/erp';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { LiveAccountsEditor, LiveMatrixEditor, livePayload, seedAccounts, seedMatrix, type AcctDraft, type Matrix } from '@/screens/ProjectLiveEdit';
@@ -66,6 +66,93 @@ function RowEditor({ title, fields, row, prefix, errs, onChange, onRemove, extra
   );
 }
 
+
+/* ---------- live project documents (READY projects) ---------- */
+type LiveDoc = { id?: string; title: string; category: string; attachmentId: string; fileName: string; contentType: string; size: number };
+function LiveDocuments({ projectId, cfg, revision, onRevision, onDirty, saveRef }: {
+  projectId: string; cfg: SetupConfig; revision: number | null; onRevision: (r: number) => void; onDirty: (d: boolean) => void;
+  saveRef: React.MutableRefObject<null | (() => Promise<boolean>)>;
+}) {
+  const c = useColors();
+  const [docs, setDocs] = useState<LiveDoc[] | null>(null);
+  const [canManage, setCanManage] = useState(false);
+  const [dirty, setDirtyL] = useState(false);
+  const [busy, setBusyL] = useState<'' | 'load' | 'upload' | 'save'>('load');
+  const [msg, setMsgL] = useState<{ ok: boolean; text: string } | null>(null);
+  const [removing, setRemoving] = useState<number | null>(null);
+  const revRef = useRef(revision); revRef.current = revision;
+  const docsRef = useRef<LiveDoc[] | null>(null); docsRef.current = docs;
+  const setDirty = (d: boolean) => { setDirtyL(d); onDirty(d); };
+  const catField = cfg.documentFields.find((f) => f.key === 'category');
+  const cats = catField?.options ?? [];
+  const load = async () => {
+    setBusyL('load'); setMsgL(null);
+    try {
+      const r = await getProjectDocuments(projectId);
+      setDocs(r.documents.map((d: ProjectDocument) => ({ ...d }))); setCanManage(r.canManage); setDirty(false);
+      if (revRef.current === null || r.revision > revRef.current) onRevision(r.revision);
+    } catch (e) { setMsgL({ ok: false, text: errMessage(e) }); } finally { setBusyL(''); }
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { void load(); }, [projectId]);
+  const persist = async (): Promise<boolean> => {
+    const list = docsRef.current; if (!list) return true;
+    const bad = list.findIndex((d) => !d.title.trim() || !d.category);
+    if (bad >= 0) { setMsgL({ ok: false, text: `Document ${bad + 1} needs a title and category.` }); return false; }
+    setBusyL('save'); setMsgL(null);
+    try {
+      const r = await saveProjectDocuments(projectId, { revision: revRef.current ?? 0, documents: list.map((d) => ({ ...(d.id ? { id: d.id } : {}), title: d.title.trim(), category: d.category, attachmentId: d.attachmentId })) });
+      setDocs(r.documents.map((d: ProjectDocument) => ({ ...d }))); onRevision(r.revision); setDirty(false);
+      setMsgL({ ok: true, text: 'Documents saved.' });
+      return true;
+    } catch (e) { setMsgL({ ok: false, text: `${errMessage(e)} Your document changes are still here; retry or reload.` }); return false; } finally { setBusyL(''); }
+  };
+  saveRef.current = dirty ? persist : null;
+  const upload = async () => {
+    if (!attachmentsSupported) { setMsgL({ ok: false, text: 'Document upload is not available on this device.' }); return; }
+    setBusyL('upload'); setMsgL(null);
+    try {
+      const f = await pickFile(DOC_TYPES.join(','));
+      if (!f) return;
+      const bad = validateFile({ type: f.type, size: f.size }) ?? (DOC_TYPES.includes(f.type.split(';')[0]) ? null : 'Only PDF, PNG, JPEG or WEBP documents are accepted.');
+      if (bad) { setMsgL({ ok: false, text: bad }); return; }
+      const att = await uploadAttachment(projectId, f, f.name);
+      setDocs((l) => [...(l ?? []), { title: att.fileName.replace(/\.[^/.]+$/, ''), category: cats.includes('master_layout') ? 'master_layout' : cats[0] ?? '', attachmentId: att.id, fileName: att.fileName, contentType: att.contentType, size: att.size }]);
+      setDirty(true);
+      setMsgL({ ok: true, text: `${att.fileName} uploaded privately. Choose its category, then Save documents.` });
+    } catch (e) { setMsgL({ ok: false, text: errMessage(e) }); } finally { setBusyL(''); }
+  };
+  const view = async (d: LiveDoc) => { try { saveBlob(await fetchAttachmentBlob(projectId, d.attachmentId), d.fileName); } catch (e) { setMsgL({ ok: false, text: errMessage(e) }); } };
+  const upd = (i: number, k: 'title' | 'category', v: string) => { setDocs((l) => (l ?? []).map((d, j) => (j === i ? { ...d, [k]: v } : d))); setDirty(true); };
+  if (!docs) return busy === 'load' ? <Banner tone="warn" title="Loading project documents" /> : <Banner tone="error" title="Documents could not load" text={msg?.text} action={{ label: 'Retry', onPress: () => void load() }} />;
+  return (
+    <View>
+      <Text style={{ color: c.mutedForeground, fontSize: 12, marginBottom: 8 }}>Documents of this live project are managed here directly. Removing a document detaches it from the project list; the private file and any finance or layout history that cites it are kept for audit. Nothing is permanently deleted.</Text>
+      {docs.length === 0 ? <Empty icon="file" title="No documents" text="Upload sanctioned plans, permits or layouts. They are stored privately against this project." /> : null}
+      {docs.map((d, i) => (
+        <Card key={d.id ?? d.attachmentId}>
+          <Text style={{ color: c.mutedForeground, fontSize: 12, marginBottom: 6 }}>{d.fileName} · {Math.max(1, Math.round(d.size / 1024))} KB{d.id ? '' : ' · not saved yet'}</Text>
+          <Field label="Title *" value={d.title} onChangeText={(v) => upd(i, 'title', v)} editable={canManage} />
+          <Chips label="Category *" options={cats.map((o) => ({ value: o, label: catField ? optLabel(catField, o) : o.replace(/_/g, ' ') }))} value={d.category} onChange={(v) => canManage && upd(i, 'category', v)} />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <Btn label="View / download" icon="download" variant="ghost" onPress={() => void view(d)} />
+            {canManage ? <Btn label="Remove from project" icon="trash-2" variant="ghost" onPress={() => setRemoving(i)} /> : null}
+          </View>
+        </Card>
+      ))}
+      {msg ? <Banner tone={msg.ok ? 'ok' : 'error'} title={msg.text} /> : null}
+      {canManage ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <Btn label="Upload document" icon="upload" variant="ghost" loading={busy === 'upload'} disabled={!!busy} onPress={() => void upload()} />
+          <Btn label="Save documents" icon="save" loading={busy === 'save'} disabled={!!busy || !dirty} onPress={() => void persist()} />
+          {dirty ? <Btn label="Discard document changes" variant="ghost" disabled={!!busy} onPress={() => void load()} /> : null}
+        </View>
+      ) : <Text style={{ color: c.mutedForeground, fontSize: 12 }}>You can view documents but not change them.</Text>}
+      {removing !== null && docs[removing] ? <Confirm title="Remove this document from the project?" text={`"${docs[removing].title}" will no longer be listed once you Save documents. The private file and any receipts, postings or layout versions that reference it stay intact; this is not a permanent deletion.`} confirmLabel="Remove" danger onConfirm={() => { const i = removing; setRemoving(null); setDocs((l) => (l ?? []).filter((_, j) => j !== i)); setDirty(true); }} onCancel={() => setRemoving(null)} /> : null}
+    </View>
+  );
+}
+
 /* ---------- setup flow ---------- */
 interface Props {
   items: WorkspaceInterfacesItem[]; // enabled, accountant-assigned sectors
@@ -108,6 +195,9 @@ export function ProjectSetup({ items, initialSectorId, existing, onClose, onSave
   const [plan, setPlan] = useState<null | { title: string; text: string; apply: () => void }>(null);
   const [doneId, setDoneId] = useState<string | null>(null);
   const finalReq = useRef<string | null>(null);
+  const [docsDirty, setDocsDirty] = useState(false);
+  const docsSave = useRef<null | (() => Promise<boolean>)>(null);
+  const revisionRef = useRef<number | null>(existing?.revision ?? null);
   const lbl = (k: string, d: string) => cfg?.labels[k] ?? d;
   const erpQ = useErp(existing && readSetupState(existing).state === 'READY' ? existing.id : null);
   const erp = erpQ.data;
@@ -136,7 +226,7 @@ export function ProjectSetup({ items, initialSectorId, existing, onClose, onSave
   ] : [];
 
   const ready = state === 'READY';
-  const lockNote = ready ? <Banner tone="warn" title="Managed in the project tabs" text="This project is already live. Change partners, accounts, documents and inventory from their own tabs so cleared records are never rewritten here. Only the details and settings above are saved." /> : null;
+  const lockNote = ready ? <Banner tone="warn" title="Managed in the project tabs" text="This project is already live. Change partners, accounts and inventory from their own tabs so cleared records are never rewritten here. Only the details and settings above are saved." /> : null;
   const locked = (n: React.ReactNode) => (ready ? <View>{lockNote}<View pointerEvents="none" style={{ opacity: 0.55 }}>{n}</View></View> : n);
   const shareKey = cfg?.partnerFields.find((f) => f.key === 'fixedEquityPercent')?.key ?? null;
   const capKey = cfg?.partnerFields.find((f) => f.key === 'initialCapital')?.key ?? null;
@@ -170,7 +260,15 @@ export function ProjectSetup({ items, initialSectorId, existing, onClose, onSave
     if (b > 0 && cap > b + 0.001) return 'Planned partner capital exceeds the project budget.';
     return null;
   };
-  const close = () => (dirty ? setConfirmClose(true) : onClose());
+  const close = () => (dirty || docsDirty ? setConfirmClose(true) : onClose());
+  const liveDocs = ready && !!projectId;
+  const onDocsRevision = React.useCallback((r: number) => { revisionRef.current = r; setRevision(r); }, []);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || !(dirty || docsDirty)) return;
+    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', h);
+    return () => window.removeEventListener('beforeunload', h);
+  }, [dirty, docsDirty]);
 
   const save = async (): Promise<{ id: string; revision: number } | null> => {
     if (!cfg) return null;
@@ -184,17 +282,20 @@ export function ProjectSetup({ items, initialSectorId, existing, onClose, onSave
     }
     const live = ready && existing && erp ? livePayload(erp, hasPlots && matrixDirty ? matrix : null, accts ?? []) : {};
     const res = await run('project.setup-save', {
-      sectorId, reviewedReleaseId: item?.releaseId, ...(projectId ? { projectId, revision } : {}), requestId: newRequestId(), setup: payload, ...live,
+      sectorId, reviewedReleaseId: item?.releaseId, ...(projectId ? { projectId, revision: revisionRef.current ?? revision } : {}), requestId: newRequestId(), setup: payload, ...live,
     });
     if (ready && erp) { setMatrixDirty(false); setMatrix(null); setAccts(null); void erpQ.refetch(); }
     const ent = readEntity(res);
-    setProjectId(ent.id); setRevision(ent.revision); setState((ent.setupState as 'DRAFT' | 'READY' | undefined) ?? state); setDirty(false);
+    setProjectId(ent.id); setRevision(ent.revision); revisionRef.current = ent.revision; setState((ent.setupState as 'DRAFT' | 'READY' | undefined) ?? state); setDirty(false);
     return ent;
   };
 
   const saveDraft = async () => {
     setBusy('draft'); setMsg(null);
-    try { const ent = await save(); if (ent) setMsg({ ok: true, text: state === 'READY' ? 'Changes saved.' : 'Draft saved. You can resume it from the project list.' }); }
+    try {
+      if (docsSave.current && !(await docsSave.current())) { setView('documents'); setMsg({ ok: false, text: 'Documents could not be saved, so other changes were not saved either. Fix the documents section and retry.' }); return; }
+      if (!dirty && ready) { setMsg({ ok: true, text: 'Changes saved.' }); return; }
+      const ent = await save(); if (ent) setMsg({ ok: true, text: state === 'READY' ? 'Changes saved.' : 'Draft saved. You can resume it from the project list.' }); }
     catch (e) { setMsg({ ok: false, text: errMessage(e) }); } finally { setBusy(null); }
   };
 
@@ -212,7 +313,7 @@ export function ProjectSetup({ items, initialSectorId, existing, onClose, onSave
       const res = await run('project.setup-finalize', { projectId: ent.id, revision: ent.revision, requestId: finalReq.current });
       const fin = readEntity(res);
       if (fin.setupState !== 'READY') throw new Error('The project was saved but not marked ready. Resume setup to retry.');
-      setState('READY'); setRevision(fin.revision); setDoneId(fin.id);
+      setState("READY"); setRevision(fin.revision); revisionRef.current = fin.revision; setDoneId(fin.id);
       const acc = readAccess(res);
       if (acc.length) setAccess(acc); else onSaved(fin.id);
     } catch (er) { setMsg({ ok: false, text: errMessage(er) }); } finally { setBusy(null); }
@@ -268,6 +369,7 @@ export function ProjectSetup({ items, initialSectorId, existing, onClose, onSave
         </View>
       );
     }
+    if (key === 'documents' && ready && projectId) return null; // rendered persistently below so unsaved edits survive navigation
     if (key === 'documents') {
       return locked(
         <View>
@@ -364,7 +466,7 @@ export function ProjectSetup({ items, initialSectorId, existing, onClose, onSave
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: c.foreground, fontFamily: 'Inter_700Bold', fontSize: 18 }}>{existing ? `Edit ${existing.name}` : cfg?.title ?? 'Add Project'}</Text>
-              <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>{state ? <Badge text={state === 'READY' ? 'Ready' : 'Draft'} tone={state === 'READY' ? 'ok' : 'warn'} /> : <Badge text="Not saved" tone="muted" />}{dirty ? <Badge text="Unsaved changes" tone="bad" /> : null}</View>
+              <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>{state ? <Badge text={state === 'READY' ? 'Ready' : 'Draft'} tone={state === 'READY' ? 'ok' : 'warn'} /> : <Badge text="Not saved" tone="muted" />}{dirty || docsDirty ? <Badge text="Unsaved changes" tone="bad" /> : null}</View>
             </View>
             <Btn label="Close" variant="ghost" icon="x" onPress={close} />
           </View>
@@ -382,12 +484,18 @@ export function ProjectSetup({ items, initialSectorId, existing, onClose, onSave
         </View>
         <KeyboardAwareScrollViewCompat style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }} bottomOffset={90} keyboardShouldPersistTaps="handled">
           {!cfg ? <Banner tone="error" title="Project setup is not configured" text={parsed.error ?? ''} /> : null}
-          {shown.map((k) => (
+          {shown.map((k) => (k === 'documents' && liveDocs ? null : (
             <View key={k} style={{ marginBottom: 16 }}>
               {curView === 'all' ? <Label>{(sections.find((s) => s.key === k)?.title ?? '').toUpperCase()}</Label> : null}
               {body(k)}
             </View>
-          ))}
+          )))}
+          {liveDocs && cfg && projectId ? (
+            <View style={{ marginBottom: 16, display: shown.includes('documents') ? 'flex' : 'none' }}>
+              {curView === 'all' ? <Label>DOCUMENTS</Label> : null}
+              <LiveDocuments projectId={projectId} cfg={cfg} revision={revision} onRevision={onDocsRevision} onDirty={setDocsDirty} saveRef={docsSave} />
+            </View>
+          ) : null}
         </KeyboardAwareScrollViewCompat>
         <View style={{ padding: 12, borderTopWidth: 1, borderColor: c.border, gap: 8 }}>
           {msg ? <Banner tone={msg.ok ? 'ok' : 'error'} title={msg.text} /> : null}

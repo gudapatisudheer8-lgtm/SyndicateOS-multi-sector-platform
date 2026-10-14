@@ -1,4 +1,5 @@
 import { MasterOptions, masterNumber } from '../../../adapter/config';
+import { confirmLeave } from '../../../adapter/leaveGuard';
 import React, { useState, useEffect } from 'react';
 import {
   TenantFirm,
@@ -129,6 +130,7 @@ interface AccountantDashboardProps {
   projectEditSeed?: Project;
   onSaveProjectForm?: (project: Project, accounts?: FirmAccount[]) => Promise<boolean>;
   onUploadProjectDocuments?: (projectId: string, documents: PlanUploadDocument[]) => Promise<boolean>;
+  onProjectDocumentsChanged?: () => void;
 }
 
 export type TopBarTab =
@@ -192,6 +194,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
   projectSetupSettings,
   onUpdateProjectSetup,
   onUploadProjectDocuments,
+  onProjectDocumentsChanged,
   projectPlotResource,
   projectPlotRecords,
   projectEditSeed,
@@ -220,6 +223,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
 
   // Top Bar Tab state
   const [activeTab, setActiveTab] = useState<TopBarTab>('dashboard');
+  const guardedTab = (t: TopBarTab) => { if (t !== activeTab && !confirmLeave()) return; setActiveTab(t); };
 
   // Filter projects belonging strictly to this firm AND matching firm's active business sectors
   const firmActiveProjects = projects.filter(
@@ -531,7 +535,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
           {/* Bar 1: Dashboard & KPIs */}
           <button
             id="topbar-dashboard"
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => guardedTab('dashboard')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all shrink-0 ${
               activeTab === 'dashboard'
                 ? 'bg-[#111827] text-white shadow-md'
@@ -552,7 +556,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
           {/* Bar 2: Partners Info & Equity */}
           <button
             id="topbar-partners"
-            onClick={() => setActiveTab('partners')}
+            onClick={() => guardedTab('partners')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all shrink-0 ${
               activeTab === 'partners'
                 ? 'bg-[#111827] text-white shadow-md'
@@ -574,7 +578,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
           {firm.sectors.includes('real_estate_open_plotting') && firm.featureFlags?.enablePlotGrid !== false && (
             <button
               id="topbar-open-plotting"
-              onClick={() => setActiveTab('open_plotting')}
+              onClick={() => guardedTab('open_plotting')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all shrink-0 ${
                 activeTab === 'open_plotting'
                   ? 'bg-[#111827] text-white shadow-md'
@@ -597,7 +601,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
           {firm.sectors.includes('real_estate_construction') && firm.featureFlags?.enableApartmentMatrix !== false && (
             <button
               id="topbar-construction"
-              onClick={() => setActiveTab('construction')}
+              onClick={() => guardedTab('construction')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all shrink-0 ${
                 activeTab === 'construction'
                   ? 'bg-[#111827] text-white shadow-md'
@@ -620,7 +624,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
           {(firm.sectors.includes('liquor_vends') || firm.sectors.includes('custom_infra')) && (
             <button
               id="topbar-liquor-infra"
-              onClick={() => setActiveTab('liquor_infra')}
+              onClick={() => guardedTab('liquor_infra')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all shrink-0 ${
                 activeTab === 'liquor_infra'
                   ? 'bg-[#111827] text-white shadow-md'
@@ -644,7 +648,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
           {/* Bar 8: Project Statement */}
           <button
             id="topbar-project-statement"
-            onClick={() => setActiveTab('project_statement')}
+            onClick={() => guardedTab('project_statement')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all shrink-0 ${
               activeTab === 'project_statement'
                 ? 'bg-[#111827] text-white shadow-md'
@@ -742,7 +746,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
             <button
               type="button"
               data-testid="card-kpi-project-cost"
-              onClick={() => setActiveTab('partners')}
+              onClick={() => guardedTab('partners')}
               aria-label="Total estimated project cost. Open Partners and Equity"
               className={kpiCardCls}
             >
@@ -782,7 +786,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
             <button
               type="button"
               data-testid="card-kpi-gross-sales"
-              onClick={() => setActiveTab(salesTab)}
+              onClick={() => guardedTab(salesTab)}
               aria-label="Projected gross sales. Open inventory"
               className={kpiCardCls}
             >
@@ -809,7 +813,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
             <button
               type="button"
               data-testid="card-kpi-inventory"
-              onClick={() => setActiveTab(salesTab)}
+              onClick={() => guardedTab(salesTab)}
               aria-label="Inventory status. Open inventory"
               className={kpiCardCls}
             >
@@ -851,7 +855,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
             <button
               type="button"
               data-testid="card-kpi-project-account"
-              onClick={() => setActiveTab('project_statement')}
+              onClick={() => guardedTab('project_statement')}
               aria-label="Project account balance. Open Project Statement"
               className={kpiCardCls}
             >
@@ -1679,6 +1683,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
           firmAccounts={firmAccounts}
           onAddFirmAccount={onAddFirmAccount}
           onUploadDocuments={onUploadProjectDocuments}
+          onDocumentsChanged={onProjectDocumentsChanged}
         />
       )}
 

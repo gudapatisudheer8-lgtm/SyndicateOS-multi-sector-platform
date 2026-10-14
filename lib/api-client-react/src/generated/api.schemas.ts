@@ -5,6 +5,93 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface GenerateLayoutRequest {
+  /** @minimum 0 */
+  revision: number;
+}
+
+/**
+ * Versioned normalized 0..100 visual geometry. Parks, optional boundary, dimensional provenance and stable live plot IDs are persisted without changing inventory.
+ */
+export interface LayoutGeometry { [key: string]: unknown }
+
+export interface SaveBlueprintRequest {
+  /** @minimum 0 */
+  revision: number;
+  /** @nullable */
+  attachmentId?: string | null;
+  geometry: LayoutGeometry;
+  confirm: boolean;
+  reviewAcknowledged: boolean;
+}
+
+export type SaveDocumentsRequestDocumentsItem = {
+  id?: string;
+  title: string;
+  category: string;
+  attachmentId: string;
+};
+
+export interface SaveDocumentsRequest {
+  /** @minimum 0 */
+  revision: number;
+  /** @maxItems 100 */
+  documents: SaveDocumentsRequestDocumentsItem[];
+}
+
+export type ProjectBlueprintStatus = typeof ProjectBlueprintStatus[keyof typeof ProjectBlueprintStatus];
+
+
+export const ProjectBlueprintStatus = {
+  EMPTY: 'EMPTY',
+  DRAFT: 'DRAFT',
+  CONFIRMED: 'CONFIRMED',
+} as const;
+
+export type ProjectBlueprintAttachmentsItem = {
+  id: string;
+  fileName: string;
+  contentType: string;
+};
+
+export interface ProjectBlueprint {
+  revision: number;
+  status: ProjectBlueprintStatus;
+  /** @nullable */
+  sourceAttachmentId?: string | null;
+  /** @nullable */
+  confirmedAttachmentId?: string | null;
+  draft?: LayoutGeometry | null;
+  confirmed?: LayoutGeometry | null;
+  canManage: boolean;
+  inventoryFingerprint: string;
+  needsReconciliation: boolean;
+  warnings?: string[];
+  attachments: ProjectBlueprintAttachmentsItem[];
+}
+
+export interface ProjectDocument {
+  id: string;
+  title: string;
+  category: string;
+  attachmentId: string;
+  fileName: string;
+  contentType: string;
+  size: number;
+}
+
+export type ProjectDocumentsCategoriesItem = {
+  value: string;
+  label: string;
+};
+
+export interface ProjectDocuments {
+  revision: number;
+  documents: ProjectDocument[];
+  canManage: boolean;
+  categories: ProjectDocumentsCategoriesItem[];
+}
+
 export type ErpRecordData = {[key: string]: unknown};
 
 export interface ErpRecord {

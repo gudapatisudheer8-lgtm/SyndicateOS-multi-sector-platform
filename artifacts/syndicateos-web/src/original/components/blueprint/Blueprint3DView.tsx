@@ -19,9 +19,13 @@ const STATUS_FILL: Record<string, { top: string; side: string; label: string }> 
 /** Orthographic SVG 3D view of CONFIRMED geometry. Uniform slab thickness is a display aid, not height. */
 export const Blueprint3DView: React.FC<{ geometry: Geometry; plots: Plot[] }> = ({ geometry: source, plots }) => {
   const geometry = useMemo(() => proportionedGeometry(source), [source]);
-  const ratioKnown = !!source.aspectRatio;
+  const ratioKnown = !!source.aspectRatio || !!source.scale;
   const [cam, setCam] = useState<Camera>(() => fitCamera(geometry, DEFAULT_CAMERA, BASE, W, H));
   const drag = useRef<{ x: number; y: number; cam: Camera; mode: 'rotate' | 'pan' } | null>(null);
+  const ptrs = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ d: number; cam: Camera } | null>(null);
+  const [presenting, setPresenting] = useState(false);
+  const [roadLabels, setRoadLabels] = useState(false);
 
   const statusByNumber = useMemo(() => {
     const m = new Map<string, string>();
@@ -47,29 +51,43 @@ export const Blueprint3DView: React.FC<{ geometry: Geometry; plots: Plot[] }> = 
       const cp = project(c.x, c.y, SLAB, cam, BASE);
       labels.push({ key: `l${i}`, x: cp.sx, y: cp.sy, text: p.number, sub: p.facing === 'UNKNOWN' ? 'facing ?' : p.facing, depth: cp.depth + 1 });
     });
+    (geometry.parks ?? []).forEach((k, i) => {
+      if (k.points.length < 3) return;
+      const top = k.points.map((v) => project(v.x, v.y, 0.25, cam, BASE));
+      out.push({ key: `k${i}`, d: `M${top.map((v) => `${v.sx},${v.sy}`).join('L')}Z`, fill: '#86CF98', stroke: '#2F7D4A', depth: -5e5 + i, title: k.name || 'Open space' });
+      const c = centroid(k.points); const cp = project(c.x, c.y, 0.3, cam, BASE);
+      labels.push({ key: `kl${i}`, x: cp.sx, y: cp.sy, text: k.name || 'Open space', sub: 'open space', depth: cp.depth + 0.4 });
+    });
+    if (geometry.boundary && geometry.boundary.points.length >= 3) {
+      const b = geometry.boundary.points.map((v) => project(v.x, v.y, 0, cam, BASE));
+      out.push({ key: 'boundary', d: `M${b.map((v) => `${v.sx},${v.sy}`).join('L')}Z`, fill: 'none', stroke: 'boundary', depth: -2e6 });
+    }
     geometry.roads.forEach((r, i) => {
-      const pts = r.points.map((v) => project(v.x, v.y, 0, cam, BASE));
+      const pts = r.points.map((v) => project(v.x, v.y, 0.05, cam, BASE));
       const mid = centroid(r.points);
       const mp = project(mid.x, mid.y, 0.2, cam, BASE);
-      labels.push({ key: `rl${i}`, x: mp.sx, y: mp.sy, text: `${r.name || 'Road'}`, sub: r.widthFeet === null ? 'width unknown' : `${r.widthFeet} ft`, depth: mp.depth + 0.5, muted: r.widthFeet === null });
-      out.push({ key: `r${i}`, d: `M${pts.map((v) => `${v.sx},${v.sy}`).join('L')}`, fill: 'none', stroke: r.widthFeet === null ? 'unknown' : 'road', depth: -1e6 + i });
+      // Keep plot numbers readable in dense layouts; internal names are opt-in.
+      if (roadLabels || /approach|main road/i.test(r.name || '')) labels.push({ key: `rl${i}`, x: mp.sx, y: mp.sy, text: `${r.name || 'Road'}`, sub: r.widthFeet === null ? 'width unknown' : `${r.widthFeet} ft wide`, depth: mp.depth + 0.5, muted: r.widthFeet === null });
+      if (r.points.length >= 3) out.push({ key: `r${i}`, d: `M${pts.map((v) => `${v.sx},${v.sy}`).join('L')}Z`, fill: r.widthFeet === null ? '#BDB6AA' : '#8B857B', stroke: '#57534E', depth: -1e6 + i });
+      else out.push({ key: `r${i}`, d: `M${pts.map((v) => `${v.sx},${v.sy}`).join('L')}`, fill: 'none', stroke: r.widthFeet === null ? 'unknown' : 'road', depth: -1e6 + i });
     });
     out.sort((a, b) => a.depth - b.depth);
     labels.sort((a, b) => a.depth - b.depth);
     return { out, labels };
-  }, [geometry, cam, statusByNumber]);
+  }, [geometry, cam, statusByNumber, roadLabels]);
 
   const north = geometry.northDegrees;
   const btn = 'inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-[11px] font-bold hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500';
 
   return (
-    <div className="space-y-2" data-testid="blueprint-3d-view">
+    <div className={presenting ? 'fixed inset-0 z-[100] overflow-auto bg-[#F5F1E8] p-4 sm:p-8 space-y-3' : 'space-y-2'} data-testid="blueprint-3d-view">
+      {presenting && <div className="flex items-center justify-between"><p className="text-lg font-black text-stone-900">Layout presentation</p><button type="button" className={btn} onClick={() => setPresenting(false)} data-testid="button-exit-presentation">Exit presentation</button></div>}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] font-semibold text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1">
-          Illustrative 3D (normalized source positions, not cadastral survey). Slab thickness is uniform and not a height.
+          Illustrative 3D of the confirmed layout. Schematic placement, not a cadastral survey or legal approval. Slab thickness is uniform and not a height.
         </p>
         <p className={`text-[11px] font-semibold rounded-lg px-2.5 py-1 border ${ratioKnown ? 'text-stone-700 bg-white border-stone-200' : 'text-red-800 bg-red-50 border-red-200'}`} data-testid="text-3d-aspect">
-          {ratioKnown ? `Source page aspect ${source.aspectRatio!.toFixed(3)} (width / height) applied` : 'Source page aspect unverified: shown square as a viewing convention only'}
+          {source.scale ? `Workspace ${Math.round(source.scale.widthFeet)} x ${Math.round(source.scale.heightFeet)} ft (${source.scale.provenance})` : ratioKnown ? `Source page aspect ${source.aspectRatio!.toFixed(3)} (width / height) applied` : 'Source page aspect unverified: shown square as a viewing convention only'}
         </p>
         <div className="flex flex-wrap gap-1.5">
           <button type="button" className={btn} aria-label="Zoom in" onClick={() => setCam((c) => ({ ...c, zoom: clamp(c.zoom * 1.2, 0.2, 8), panX: c.panX * 1.2, panY: c.panY * 1.2 }))}><ZoomIn className="w-3.5 h-3.5" /></button>
@@ -77,12 +95,14 @@ export const Blueprint3DView: React.FC<{ geometry: Geometry; plots: Plot[] }> = 
           <button type="button" className={btn} onClick={() => setCam((c) => fitCamera(geometry, c, BASE, W, H))}><Maximize className="w-3.5 h-3.5" /> Fit</button>
           <button type="button" className={btn} onClick={() => setCam((c) => fitCamera(geometry, { ...c, yaw: 0, pitch: 90 }, BASE, W, H))}>Top</button>
           <button type="button" className={btn} onClick={() => setCam(fitCamera(geometry, DEFAULT_CAMERA, BASE, W, H))}><RotateCcw className="w-3.5 h-3.5" /> Reset</button>
+          <button type="button" className={btn} aria-pressed={roadLabels} onClick={() => setRoadLabels((v) => !v)}>{roadLabels ? 'Hide internal road labels' : 'Show internal road labels'}</button>
+          {!presenting && <button type="button" className={btn} onClick={() => setPresenting(true)} data-testid="button-presentation">Customer presentation</button>}
         </div>
       </div>
       <div className="grid grid-cols-2 sm:flex sm:items-center gap-3 text-[11px] text-stone-700">
         <label className="flex items-center gap-2">Rotate <input aria-label="Yaw rotation" type="range" min={-180} max={180} value={Math.round(cam.yaw)} onChange={(e) => setCam((c) => ({ ...c, yaw: Number(e.target.value) }))} className="accent-amber-600" /></label>
         <label className="flex items-center gap-2">Tilt <input aria-label="Pitch tilt" type="range" min={15} max={90} value={Math.round(cam.pitch)} onChange={(e) => setCam((c) => ({ ...c, pitch: Number(e.target.value) }))} className="accent-amber-600" /></label>
-        <span className="col-span-2 text-stone-500">Drag to rotate, Shift+drag to pan, wheel to zoom.</span>
+        <span className="col-span-2 text-stone-500">Drag to orbit, Shift+drag to pan, wheel or pinch to zoom.</span>
       </div>
       <div className="rounded-2xl border border-stone-200 bg-gradient-to-b from-[#F7F2E7] to-[#ECE4D2] overflow-hidden">
         <svg
@@ -90,17 +110,21 @@ export const Blueprint3DView: React.FC<{ geometry: Geometry; plots: Plot[] }> = 
           className="w-full h-auto touch-none select-none cursor-grab active:cursor-grabbing"
           role="img"
           aria-label={`Illustrative 3D layout with ${geometry.plots.length} plots and ${geometry.roads.length} roads`}
-          onPointerDown={(e) => { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); drag.current = { x: e.clientX, y: e.clientY, cam, mode: e.shiftKey || e.button === 1 ? 'pan' : 'rotate' }; }}
+          onPointerDown={(e) => { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); ptrs.current.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptrs.current.size === 2) { const [a, b] = [...ptrs.current.values()]; pinch.current = { d: Math.hypot(a.x - b.x, a.y - b.y), cam }; drag.current = null; return; } drag.current = { x: e.clientX, y: e.clientY, cam, mode: e.shiftKey || e.button === 1 ? 'pan' : 'rotate' }; }}
           onPointerMove={(e) => {
+            if (ptrs.current.has(e.pointerId)) ptrs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (pinch.current && ptrs.current.size >= 2) { const [a, b] = [...ptrs.current.values()]; const f = Math.hypot(a.x - b.x, a.y - b.y) / (pinch.current.d || 1); const c0 = pinch.current.cam; setCam({ ...c0, zoom: clamp(c0.zoom * f, 0.2, 8), panX: c0.panX * f, panY: c0.panY * f }); return; }
             const d = drag.current; if (!d) return;
             const dx = e.clientX - d.x, dy = e.clientY - d.y;
             setCam(d.mode === 'pan' ? { ...d.cam, panX: d.cam.panX + dx, panY: d.cam.panY + dy } : { ...d.cam, yaw: d.cam.yaw + dx * 0.4, pitch: clamp(d.cam.pitch - dy * 0.3, 15, 90) });
           }}
-          onPointerUp={() => { drag.current = null; }}
-          onPointerCancel={() => { drag.current = null; }}
+          onPointerUp={(e) => { ptrs.current.delete(e.pointerId); if (ptrs.current.size < 2) pinch.current = null; drag.current = null; }}
+          onPointerCancel={(e) => { ptrs.current.delete(e.pointerId); pinch.current = null; drag.current = null; }}
           onWheel={(e) => { const f = e.deltaY < 0 ? 1.1 : 1 / 1.1; setCam((c) => ({ ...c, zoom: clamp(c.zoom * f, 0.2, 8), panX: c.panX * f, panY: c.panY * f })); }}
         >
-          {faces.out.map((f) => f.fill === 'none' ? (
+          {faces.out.map((f) => f.stroke === 'boundary' ? (
+            <path key={f.key} d={f.d} fill="none" stroke="#7C2D12" strokeWidth={1.4} strokeDasharray="6 4" />
+          ) : f.fill === 'none' ? (
             <path key={f.key} d={f.d} fill="none" stroke={f.stroke === 'unknown' ? '#A8A29E' : '#44403C'} strokeWidth={f.stroke === 'unknown' ? 5 : 7} strokeDasharray={f.stroke === 'unknown' ? '8 6' : undefined} strokeLinecap="round" strokeLinejoin="round" opacity={0.85} />
           ) : (
             <path key={f.key} d={f.d} fill={f.fill} stroke={f.stroke} strokeWidth={0.6} strokeLinejoin="round">{f.title && <title>{f.title}</title>}</path>

@@ -76,7 +76,13 @@ export function pickFile(accept = ACCEPT): Promise<File | null> {
     if (!attachmentsSupported) return resolve(null);
     const i = document.createElement('input');
     i.type = 'file'; i.accept = accept;
-    i.onchange = () => resolve(i.files?.[0] ?? null);
+    let done = false;
+    const finish = (f: File | null) => { if (done) return; done = true; window.removeEventListener('focus', onFocus); resolve(f); };
+    // Browsers fire no change event on cancel; 'cancel' (modern) or a focus return settles it so callers never stay busy.
+    const onFocus = () => setTimeout(() => finish(i.files?.[0] ?? null), 600);
+    i.onchange = () => finish(i.files?.[0] ?? null);
+    i.addEventListener('cancel', () => finish(null));
+    window.addEventListener('focus', onFocus);
     i.click();
   });
 }
