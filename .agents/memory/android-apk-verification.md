@@ -9,6 +9,12 @@ Do not diagnose APK corruption from Info-ZIP's extra-field warnings alone. Align
 
 **How to apply:** Distinguish archive integrity, cryptographic signing, Android-version compatibility, and the downloaded copy on the user's phone. A successful CRC check or the presence of a signing block alone does not establish that Android will accept the APK.
 
+Treat the phone's generic “problem while parsing the package” popup as an ambiguous symptom, not a reliable package-parser diagnosis.
+
+**Why:** That popup accompanied an Android package-manager failure to allocate internal storage, despite a complete download and successful APK signature verification.
+
+**How to apply:** Obtain the package-manager installation error before rebuilding or changing SDK/signing settings. If it reports insufficient internal space, resolve the device storage blocker first; installation needs working space beyond the APK download size.
+
 Recheck temporary diagnostic inputs in the active runtime before interpreting compiler or class-loader failures as an application toolchain problem.
 
 **Why:** A previously prepared diagnostic JAR and ignored verifier source were no longer available when the subsequent validation command ran; regenerating the isolated diagnostic inputs allowed verification to succeed without changing application dependencies.
