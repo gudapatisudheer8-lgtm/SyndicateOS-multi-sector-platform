@@ -8,7 +8,16 @@
         "projectId": "2e26af93-eb82-40e1-8910-9209003b0275"
       }
     },
-    "version": "1.0.1",
+    "version": "1.0.2",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "enabled": true,
+      "url": "https://u.expo.dev/2e26af93-eb82-40e1-8910-9209003b0275",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "orientation": "portrait",
     "icon": "./assets/brand/icon.png",
     "scheme": "syndicateos-mobile",
@@ -18,7 +27,7 @@
     },
     "android": {
       "package": "in.krishisetu9.syndicateos",
-      "versionCode": 2,
+      "versionCode": 3,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/brand/adaptive-foreground.png",

@@ -4,6 +4,8 @@
   },
   "build": {
     "apk": {
+      "channel": "production",
+      "environment": "production",
       "pnpm": "10.26.1",
       "distribution": "internal",
       "developmentClient": false,
@@ -15,6 +17,10 @@
         "buildType": "apk",
         "image": "latest"
       }
+    },
+    "apk-preview": {
+      "extends": "apk",
+      "channel": "preview"
     }
   }
 }

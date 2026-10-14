@@ -21,3 +21,4 @@
 - [Android APK verification](android-apk-verification.md) — archive-tool extra-field warnings alone do not prove APK corruption; separate integrity, signing and device compatibility.
 - [Native auth layout](native-auth-layout.md) — Android system splash masking needs padded artwork; native login fields need keyboard-aware scrolling, not just browser verification.
 - [OpenAPI schema names](openapi-schema-names.md) — distinct named request components avoid generated model/validator export collisions; generation must pass shared-library typechecks.
+- [Native OTA delivery](native-ota-delivery.md) — separate production/preview channels; fingerprint compatibility, background updates, clean CNG publishing, and explicit API environment.
